@@ -3,7 +3,7 @@ from __future__ import annotations
 import curses
 import time
 
-from snake_game.game import DOWN, LEFT, RIGHT, UP, Game
+from snake_game.core import DOWN, LEFT, RIGHT, UP, Game
 
 KEY_MAP = {
     curses.KEY_UP: UP,
