@@ -1,9 +1,12 @@
 PYTHON := uv run python
 
-.PHONY: run test lint format
+.PHONY: run run-ui test lint format
 
 run:
 	$(PYTHON) -m snake_game
+
+run-ui:
+	$(PYTHON) -m snake_game.pygame_ui
 
 test:
 	uv run pytest

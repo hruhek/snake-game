@@ -8,6 +8,12 @@ Classic Snake in the terminal using Python's built-in `curses`.
 uv run python -m snake_game
 ```
 
+## Run (Pygame UI)
+
+```bash
+uv run python -m snake_game.pygame_ui
+```
+
 ## Tests
 
 ```bash
