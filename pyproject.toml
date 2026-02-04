@@ -1,0 +1,27 @@
+[project]
+name = "snake-game"
+version = "0.1.0"
+description = "Classic Snake game in terminal"
+readme = "README.md"
+requires-python = ">=3.14"
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.14.14",
+]
