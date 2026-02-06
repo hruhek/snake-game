@@ -3,7 +3,7 @@ name = "snake-game"
 version = "0.1.0"
 description = "Classic Snake game in terminal"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "pygame>=2.6.1",
 ]

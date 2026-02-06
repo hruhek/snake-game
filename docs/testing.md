@@ -2,6 +2,4 @@
 
 ## Latest run
 
-- Date: 2026-02-06
-- Command: `make test`
-- Result: pass (5 tests)
+Test run logging has been retired. Use CI history or local output for results.

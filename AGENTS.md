@@ -12,7 +12,7 @@
 
 - Docs index: `docs/README.md`.
 - If you change controls/config/timing, update `docs/troubleshooting.md`.
-- When you run tests, record the latest run in `docs/testing.md`.
+- Do not record test runs in `docs/testing.md`.
 
 ## Project layout
 
