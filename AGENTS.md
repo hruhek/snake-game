@@ -17,6 +17,7 @@
 ## Project layout
 
 - `src/snake_game/core.py`: core game logic and state.
+- `src/snake_game/game.py`: backward-compatible re-exports for core logic (tests import from here).
 - `src/snake_game/cli.py`: terminal UI (curses).
 - `src/snake_game/pygame_ui.py`: pygame UI.
 - `src/snake_game/__main__.py`: `python -m snake_game` entrypoint.
@@ -31,4 +32,3 @@
 ## CI
 
 - Always run `make lint` and `make test` before submitting changes.
-
