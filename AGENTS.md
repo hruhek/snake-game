@@ -12,7 +12,6 @@
 
 - Docs index: `docs/README.md`.
 - Update `docs/troubleshooting.md` if controls/config/timing change.
-- Do not record test runs in `docs/testing.md`.
 
 ## Project layout
 
@@ -28,4 +27,4 @@
 
 ## CI
 
-- Always run `make lint-fix` and `make test` before submitting changes.
+- Always run `make format`, `make lint-fix`, and `make test` before submitting changes.
