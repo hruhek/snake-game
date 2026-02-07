@@ -2,12 +2,38 @@
 
 from snake_game.core import (  # noqa: F401
     DOWN,
+    EVENT_GAME_OVER,
+    EVENT_RESET,
+    EVENT_STEP,
     LEFT,
     RIGHT,
     UP,
     Game,
+    GameFactory,
+    GameObserver,
     GameState,
+    MovementStrategy,
+    StandardMovementStrategy,
     StepResult,
+    WraparoundGameFactory,
+    WraparoundMovementStrategy,
 )
 
-__all__ = ["DOWN", "LEFT", "RIGHT", "UP", "Game", "GameState", "StepResult"]
+__all__ = [
+    "DOWN",
+    "EVENT_GAME_OVER",
+    "EVENT_RESET",
+    "EVENT_STEP",
+    "LEFT",
+    "RIGHT",
+    "UP",
+    "Game",
+    "GameFactory",
+    "GameObserver",
+    "GameState",
+    "MovementStrategy",
+    "StandardMovementStrategy",
+    "StepResult",
+    "WraparoundGameFactory",
+    "WraparoundMovementStrategy",
+]
