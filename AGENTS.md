@@ -5,7 +5,7 @@
 - `make run`
 - `make run-ui`
 - `make test`
-- `make lint`
+- `make lint-fix`
 - `make format`
 
 ## Docs
@@ -28,4 +28,4 @@
 
 ## CI
 
-- Always run `make lint` and `make test` before submitting changes.
+- Always run `make lint-fix` and `make test` before submitting changes.
