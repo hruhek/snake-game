@@ -257,5 +257,5 @@ def _draw_bitmap_text(
         y += line_height
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     run()
