@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Callable
+
 import pygame
 
-from snake_game.core import DOWN, LEFT, RIGHT, UP, Game
+from snake_game.core import DOWN, LEFT, RIGHT, UP, Game, GameFactory, GameObserver
 
 KEY_MAP = {
     pygame.K_UP: UP,
@@ -38,8 +40,40 @@ def run() -> None:
         pygame.quit()
 
 
+class _PygameObserver(GameObserver):
+    def __init__(
+        self,
+        screen: pygame.Surface,
+        game: Game,
+        paused_getter: Callable[[], bool],
+        font: _FontLike | None,
+        small_font: _FontLike | None,
+        grid_w: int,
+        grid_h: int,
+    ) -> None:
+        self._screen = screen
+        self._game = game
+        self._paused_getter = paused_getter
+        self._font = font
+        self._small_font = small_font
+        self._grid_w = grid_w
+        self._grid_h = grid_h
+
+    def on_state_change(self, state: object, event: str) -> None:
+        _render(
+            self._screen,
+            self._game,
+            self._paused_getter(),
+            self._font,
+            self._small_font,
+            self._grid_w,
+            self._grid_h,
+        )
+
+
 def _main() -> None:
-    game = Game(width=20, height=15)
+    factory = GameFactory()
+    game = factory.create(width=20, height=15)
     paused = False
 
     grid_w = game.state.width * CELL_SIZE
@@ -51,9 +85,15 @@ def _main() -> None:
     pygame.display.set_caption("Snake")
 
     font, small_font = _load_fonts()
+    observer = _PygameObserver(
+        screen, game, lambda: paused, font, small_font, grid_w, grid_h
+    )
+    game.add_observer(observer)
     clock = pygame.time.Clock()
     time_since_tick = 0.0
     running = True
+
+    _render(screen, game, paused, font, small_font, grid_w, grid_h)
 
     while running:
         dt = clock.tick(FPS) / 1000
@@ -69,16 +109,19 @@ def _main() -> None:
                     running = False
                 elif event.key == pygame.K_p:
                     paused = not paused
+                    _render(screen, game, paused, font, small_font, grid_w, grid_h)
                 elif event.key == pygame.K_r:
                     game.reset()
                     paused = False
                     time_since_tick = 0.0
+                    _render(screen, game, paused, font, small_font, grid_w, grid_h)
 
         if not paused and time_since_tick >= TICK_SECONDS:
             game.step()
             time_since_tick = 0.0
 
-        _render(screen, game, paused, font, small_font, grid_w, grid_h)
+        if paused:
+            pygame.display.flip()
 
 
 def _render(

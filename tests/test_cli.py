@@ -53,6 +53,7 @@ class FakeGame:
         self.set_direction_calls = []
         self.reset_calls = 0
         self.step_calls = 0
+        self._observers = []
 
     @property
     def state(self):
@@ -72,10 +73,22 @@ class FakeGame:
             alive=True,
             score=0,
         )
+        for observer in list(self._observers):
+            observer.on_state_change(self._state, "reset")
 
     def step(self):
         self.step_calls += 1
+        for observer in list(self._observers):
+            observer.on_state_change(self._state, "step")
         return StepResult(self._state, grew=False, game_over=False)
+
+    def add_observer(self, observer):
+        if observer not in self._observers:
+            self._observers.append(observer)
+
+    def remove_observer(self, observer):
+        if observer in self._observers:
+            self._observers.remove(observer)
 
 
 def test_run_calls_curses_wrapper(monkeypatch):
@@ -95,7 +108,11 @@ def test_main_handles_keys_and_ticks(monkeypatch):
         keys=[cli.curses.KEY_UP, -1, ord("p"), ord("r"), ord("q")]
     )
 
-    monkeypatch.setattr(cli, "Game", lambda width, height: fake_game)
+    class FakeFactory:
+        def create(self, width=20, height=15, seed=None):
+            return fake_game
+
+    monkeypatch.setattr(cli, "GameFactory", FakeFactory)
     monkeypatch.setattr(cli, "_render", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(cli.curses, "curs_set", lambda _value: None)
     monkeypatch.setattr(time, "sleep", lambda _value: None)

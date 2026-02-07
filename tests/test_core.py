@@ -2,7 +2,20 @@ import importlib
 
 import pytest
 
-from snake_game.core import DOWN, LEFT, RIGHT, UP, Game, GameState
+from snake_game.core import (
+    DOWN,
+    EVENT_GAME_OVER,
+    EVENT_RESET,
+    EVENT_STEP,
+    LEFT,
+    RIGHT,
+    UP,
+    Game,
+    GameFactory,
+    GameState,
+    WraparoundGameFactory,
+    WraparoundMovementStrategy,
+)
 
 
 def test_invalid_grid_raises():
@@ -98,3 +111,89 @@ def test_package_exports():
 
 def test_main_module_import():
     importlib.import_module("snake_game.__main__")
+
+
+def test_wraparound_strategy():
+    game = Game(width=5, height=5, seed=1, strategy=WraparoundMovementStrategy())
+    game._state = GameState(
+        **{
+            **game.state.__dict__,
+            "snake": ((4, 2), (3, 2), (2, 2)),
+            "direction": RIGHT,
+            "food": (0, 0),
+        }
+    )
+    result = game.step()
+    assert result.game_over is False
+    assert game.state.head == (0, 2)
+
+
+def test_observer_events():
+    game = Game(width=5, height=5, seed=1)
+    events: list[str] = []
+
+    class Observer:
+        def on_state_change(self, state, event):
+            events.append(event)
+
+    observer = Observer()
+    game.add_observer(observer)
+    game.step()
+    game.reset()
+    game._state = GameState(
+        **{
+            **game.state.__dict__,
+            "snake": ((4, 2), (3, 2), (2, 2)),
+            "direction": RIGHT,
+        }
+    )
+    game.step()
+
+    assert EVENT_STEP in events
+    assert EVENT_RESET in events
+    assert EVENT_GAME_OVER in events
+
+
+def test_remove_observer_stops_notifications():
+    game = Game(width=5, height=5, seed=1)
+    events: list[str] = []
+
+    class Observer:
+        def on_state_change(self, state, event):
+            events.append(event)
+
+    observer = Observer()
+    game.add_observer(observer)
+    game.remove_observer(observer)
+    game.step()
+    assert events == []
+
+
+def test_factories_create_games():
+    factory = GameFactory()
+    game = factory.create(width=5, height=5, seed=1)
+    assert game.state.width == 5
+
+    wrap_factory = WraparoundGameFactory()
+    wrap_game = wrap_factory.create(width=5, height=5, seed=1)
+    wrap_game._state = GameState(
+        **{
+            **wrap_game.state.__dict__,
+            "snake": ((4, 2), (3, 2), (2, 2)),
+            "direction": RIGHT,
+        }
+    )
+    wrap_game.step()
+    assert wrap_game.state.head == (0, 2)
+
+
+def test_add_observer_ignores_duplicates():
+    game = Game(width=5, height=5, seed=1)
+
+    class Observer:
+        def on_state_change(self, state, event):
+            pass
+
+    observer = Observer()
+    game.add_observer(observer)
+    game.add_observer(observer)

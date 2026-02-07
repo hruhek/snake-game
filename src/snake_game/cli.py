@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import curses
 import time
+from typing import Callable
 
-from snake_game.core import DOWN, LEFT, RIGHT, UP, Game
+from snake_game.core import DOWN, LEFT, RIGHT, UP, Game, GameFactory, GameObserver
 
 KEY_MAP = {
     curses.KEY_UP: UP,
@@ -21,16 +22,33 @@ def run() -> None:
     curses.wrapper(_main)
 
 
+class _CursesObserver(GameObserver):
+    def __init__(
+        self, stdscr: curses.window, game: Game, paused_getter: Callable[[], bool]
+    ) -> None:
+        self._stdscr = stdscr
+        self._game = game
+        self._paused_getter = paused_getter
+
+    def on_state_change(self, state: object, event: str) -> None:
+        _render(self._stdscr, self._game, self._paused_getter())
+
+
 def _main(stdscr: curses.window) -> None:
     curses.curs_set(0)
     stdscr.nodelay(True)
     stdscr.keypad(True)
 
-    game = Game(width=20, height=15)
+    factory = GameFactory()
+    game = factory.create(width=20, height=15)
     paused = False
+    observer = _CursesObserver(stdscr, game, lambda: paused)
+    game.add_observer(observer)
 
     tick_seconds = 0.12
     last_tick = time.monotonic()
+
+    _render(stdscr, game, paused)
 
     while True:
         now = time.monotonic()
@@ -42,16 +60,17 @@ def _main(stdscr: curses.window) -> None:
             break
         elif key in (ord("p"), ord("P")):
             paused = not paused
+            _render(stdscr, game, paused)
         elif key in (ord("r"), ord("R")):
             game.reset()
             paused = False
             last_tick = time.monotonic()
+            _render(stdscr, game, paused)
 
         if not paused and now - last_tick >= tick_seconds:
             game.step()
             last_tick = now
 
-        _render(stdscr, game, paused)
         time.sleep(0.01)
 
 

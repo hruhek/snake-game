@@ -38,6 +38,7 @@ class FakeGame:
         self.set_direction_calls = []
         self.reset_calls = 0
         self.step_calls = 0
+        self._observers = []
 
     @property
     def state(self):
@@ -51,9 +52,21 @@ class FakeGame:
         self._state = GameState(
             **{**self._state.__dict__, "score": 0, "alive": True, "direction": RIGHT}
         )
+        for observer in list(self._observers):
+            observer.on_state_change(self._state, "reset")
 
     def step(self):
         self.step_calls += 1
+        for observer in list(self._observers):
+            observer.on_state_change(self._state, "step")
+
+    def add_observer(self, observer):
+        if observer not in self._observers:
+            self._observers.append(observer)
+
+    def remove_observer(self, observer):
+        if observer in self._observers:
+            self._observers.remove(observer)
 
 
 def test_run_calls_init_and_quit(monkeypatch):
@@ -95,7 +108,11 @@ def test_main_handles_key_events(monkeypatch):
         def tick(self, _fps):
             return 1000
 
-    monkeypatch.setattr(ui, "Game", lambda width, height: fake_game)
+    class FakeFactory:
+        def create(self, width=20, height=15, seed=None):
+            return fake_game
+
+    monkeypatch.setattr(ui, "GameFactory", FakeFactory)
     monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
     monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
     monkeypatch.setattr(ui.pygame.event, "get", fake_events)
@@ -120,7 +137,11 @@ def test_main_steps_and_handles_quit(monkeypatch):
         def tick(self, _fps):
             return 1000
 
-    monkeypatch.setattr(ui, "Game", lambda width, height: fake_game)
+    class FakeFactory:
+        def create(self, width=20, height=15, seed=None):
+            return fake_game
+
+    monkeypatch.setattr(ui, "GameFactory", FakeFactory)
     monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
     monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
     monkeypatch.setattr(ui.pygame.event, "get", fake_events)
@@ -131,6 +152,42 @@ def test_main_steps_and_handles_quit(monkeypatch):
     ui._main()
 
     assert fake_game.step_calls == 1
+
+
+def test_main_paused_flips_display(monkeypatch):
+    fake_game = FakeGame()
+    surface = FakeSurface()
+    flips = {"count": 0}
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_p),
+            SimpleNamespace(type=ui.pygame.QUIT),
+        ]
+
+    def fake_flip():
+        flips["count"] += 1
+
+    class FakeClock:
+        def tick(self, _fps):
+            return 1000
+
+    class FakeFactory:
+        def create(self, width=20, height=15, seed=None):
+            return fake_game
+
+    monkeypatch.setattr(ui, "GameFactory", FakeFactory)
+    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
+    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
+    monkeypatch.setattr(ui.pygame.display, "flip", fake_flip)
+    monkeypatch.setattr(ui.pygame.event, "get", fake_events)
+    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
+    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "_load_fonts", lambda: (None, None))
+
+    ui._main()
+
+    assert flips["count"] >= 1
 
 
 def test_render_status_and_food(monkeypatch):

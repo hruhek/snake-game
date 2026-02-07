@@ -8,13 +8,36 @@
 - `src/snake_game/pygame_ui.py`: pygame UI loop, rendering, and presentation settings.
 - `src/snake_game/__main__.py`: default entrypoint for the terminal UI.
 
+## Patterns in use
+
+- **Strategy**: `MovementStrategy` with `StandardMovementStrategy` and
+  `WraparoundMovementStrategy` controls how the next head position is computed.
+- **Observer**: `GameObserver` receives `EVENT_STEP`, `EVENT_RESET`, and
+  `EVENT_GAME_OVER` notifications for UI rendering.
+- **Factory Method**: `GameFactory` and `WraparoundGameFactory` create configured
+  game instances without exposing construction details to UIs.
+
 ## Public API for game logic
 
 Use `snake_game.game` for imports in tests or external code. It re-exports the core symbols and keeps a stable import path even if internal module locations change.
 
 Example:
 ```python
-from snake_game.game import Game, GameState, StepResult, UP, DOWN, LEFT, RIGHT
+from snake_game.game import (
+    Game,
+    GameFactory,
+    GameObserver,
+    GameState,
+    MovementStrategy,
+    StandardMovementStrategy,
+    StepResult,
+    WraparoundGameFactory,
+    WraparoundMovementStrategy,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+)
 ```
 
 If you change or add core symbols in `src/snake_game/core.py`, update the re-export list in `src/snake_game/game.py`.
@@ -41,4 +64,6 @@ Pygame UI settings live in `src/snake_game/pygame_ui.py`:
 ## UI behavior notes
 
 - Both UIs call `Game.set_direction(...)` and `Game.step()` on the same core logic.
-- Both UIs support the same control scheme: arrows/WASD to move, `P` to pause, `R` to restart, `Q` to quit.
+- Both UIs use `GameFactory` for construction and `GameObserver` notifications for rendering.
+- Both UIs support the same control scheme: arrows/WASD to move, `P` to pause,
+  `R` to restart, `Q` to quit.
