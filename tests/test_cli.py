@@ -1,7 +1,7 @@
 import time
 
 import snake_game.cli as cli
-from snake_game.core import RIGHT, Game, GameState, StepResult
+from snake_game.core import RIGHT, Game, GameProtocol, GameState, StepResult
 
 
 class FakeScreen:
@@ -38,7 +38,7 @@ class FakeScreen:
         self.refreshed = True
 
 
-class FakeGame:
+class FakeGame(GameProtocol):
     def __init__(self, width=20, height=15):
         snake = ((2, 2), (1, 2), (0, 2))
         self._state = GameState(
@@ -86,10 +86,6 @@ class FakeGame:
         if observer not in self._observers:
             self._observers.append(observer)
 
-    def remove_observer(self, observer):
-        if observer in self._observers:
-            self._observers.remove(observer)
-
 
 def test_run_calls_curses_wrapper(monkeypatch):
     called = {}
@@ -104,9 +100,7 @@ def test_run_calls_curses_wrapper(monkeypatch):
 
 def test_main_handles_keys_and_ticks(monkeypatch):
     fake_game = FakeGame()
-    screen = FakeScreen(
-        keys=[cli.curses.KEY_UP, -1, ord("p"), ord("r"), ord("q")]
-    )
+    screen = FakeScreen(keys=[cli.curses.KEY_UP, -1, ord("p"), ord("r"), ord("q")])
 
     class FakeFactory:
         def create(self, width=20, height=15, seed=None):

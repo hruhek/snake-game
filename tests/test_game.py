@@ -1,4 +1,4 @@
-from snake_game.game import LEFT, RIGHT, Game, GameState
+from snake_game.game import LEFT, RIGHT, Game
 
 
 def test_moves_forward():
@@ -15,28 +15,20 @@ def test_prevents_reverse_direction():
     assert game.state.direction == RIGHT
 
 
-def test_grows_on_food():
+def test_grows_on_food(set_state):
     game = Game(width=10, height=10, seed=1)
     head_x, head_y = game.state.head
     food_pos = (head_x + 1, head_y)
-    game._state = GameState(
-        **{**game.state.__dict__, "food": food_pos, "direction": RIGHT}
-    )
+    set_state(game, food=food_pos, direction=RIGHT)
     result = game.step()
     assert result.grew is True
     assert len(game.state.snake) == 4
     assert game.state.score == 1
 
 
-def test_wall_collision_ends_game():
+def test_wall_collision_ends_game(set_state):
     game = Game(width=5, height=5, seed=1)
-    game._state = GameState(
-        **{
-            **game.state.__dict__,
-            "snake": ((4, 2), (3, 2), (2, 2)),
-            "direction": RIGHT,
-        }
-    )
+    set_state(game, snake=((4, 2), (3, 2), (2, 2)), direction=RIGHT)
     result = game.step()
     assert result.game_over is True
     assert game.state.alive is False

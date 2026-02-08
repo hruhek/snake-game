@@ -1,10 +1,10 @@
 import sys
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
 import snake_game.pygame_ui as ui
-from snake_game.core import RIGHT, GameState
+from snake_game.core import RIGHT, GameProtocol, GameState, StepResult
 
 
 class FakeSurface:
@@ -24,7 +24,7 @@ class FakeRect:
         self.args = (x, y, w, h)
 
 
-class FakeGame:
+class FakeGame(GameProtocol):
     def __init__(self, width=20, height=15):
         self._state = GameState(
             width=width,
@@ -59,14 +59,11 @@ class FakeGame:
         self.step_calls += 1
         for observer in list(self._observers):
             observer.on_state_change(self._state, "step")
+        return StepResult(self._state, grew=False, game_over=False)
 
     def add_observer(self, observer):
         if observer not in self._observers:
             self._observers.append(observer)
-
-    def remove_observer(self, observer):
-        if observer in self._observers:
-            self._observers.remove(observer)
 
 
 def test_run_calls_init_and_quit(monkeypatch):
@@ -226,9 +223,7 @@ def test_render_status_and_food(monkeypatch):
 
     rect_calls.clear()
     drawn_text.clear()
-    game._state = GameState(
-        **{**game.state.__dict__, "food": (4, 4), "alive": False}
-    )
+    game._state = GameState(**{**game.state.__dict__, "food": (4, 4), "alive": False})
     ui._render(
         surface,
         game,
@@ -261,7 +256,10 @@ def test_load_fonts_fallback(monkeypatch):
         def init(self):
             raise NotImplementedError
 
-    class FakeFreeType:
+    class FakeFreeType(ModuleType):
+        def __init__(self):
+            super().__init__("pygame.freetype")
+
         def init(self):
             return None
 
@@ -277,7 +275,10 @@ def test_load_fonts_fallback(monkeypatch):
 
 
 def test_load_fonts_none(monkeypatch):
-    class FakeFreeType:
+    class FakeFreeType(ModuleType):
+        def __init__(self):
+            super().__init__("pygame.freetype")
+
         def init(self):
             raise NotImplementedError
 
@@ -332,7 +333,7 @@ def test_draw_text_branches(monkeypatch):
 def test_draw_bitmap_text(monkeypatch):
     rect_calls = []
 
-    def fake_rect(_screen, _color, rect):
+    def fake_rect(_screen, _color, rect, width=0):
         rect_calls.append(rect.args)
 
     monkeypatch.setattr(ui.pygame, "Rect", FakeRect)

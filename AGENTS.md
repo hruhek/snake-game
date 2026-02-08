@@ -7,24 +7,14 @@
 - `make test`
 - `make lint-fix`
 - `make format`
+- Use `uv` for running and tooling; do not run this project with `python3` directly.
 
 ## Docs
 
 - Docs index: `docs/README.md`.
+- Architecture and module responsibilities: `docs/architecture.md`.
 - Update `docs/troubleshooting.md` if controls/config/timing change.
-
-## Project layout
-
-- `src/snake_game/core.py`: core game logic/state and patterns.
-- `src/snake_game/game.py`: re-exports for stable imports.
-- `src/snake_game/cli.py` / `src/snake_game/pygame_ui.py`: UIs.
-- `tests/`: pytest suite.
-
-## Tech stack
-
-- Python package managed with `uv` (`pyproject.toml`).
-- Lint/format with `ruff`, tests with `pytest`.
 
 ## CI
 
-- Always run `make format`, `make lint-fix`, and `make test` before submitting changes.
+- Always run `make qa` before submitting changes.

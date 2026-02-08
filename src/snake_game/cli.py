@@ -2,9 +2,18 @@ from __future__ import annotations
 
 import curses
 import time
-from typing import Callable
+from collections.abc import Callable
+from typing import Protocol, cast
 
-from snake_game.core import DOWN, LEFT, RIGHT, UP, Game, GameFactory, GameObserver
+from snake_game.core import (
+    DOWN,
+    LEFT,
+    RIGHT,
+    UP,
+    GameFactory,
+    GameObserver,
+    GameProtocol,
+)
 
 KEY_MAP = {
     curses.KEY_UP: UP,
@@ -19,12 +28,25 @@ KEY_MAP = {
 
 
 def run() -> None:
-    curses.wrapper(_main)
+    curses.wrapper(cast(Callable[[curses.window], None], _main))
+
+
+class _WindowLike(Protocol):
+    def nodelay(self, flag: bool) -> None: ...
+    def keypad(self, flag: bool) -> None: ...
+    def getch(self) -> int: ...
+    def erase(self) -> None: ...
+    def addch(self, y: int, x: int, char: str) -> None: ...
+    def addstr(self, y: int, x: int, text: str) -> None: ...
+    def refresh(self) -> None: ...
 
 
 class _CursesObserver(GameObserver):
     def __init__(
-        self, stdscr: curses.window, game: Game, paused_getter: Callable[[], bool]
+        self,
+        stdscr: _WindowLike,
+        game: GameProtocol,
+        paused_getter: Callable[[], bool],
     ) -> None:
         self._stdscr = stdscr
         self._game = game
@@ -34,7 +56,7 @@ class _CursesObserver(GameObserver):
         _render(self._stdscr, self._game, self._paused_getter())
 
 
-def _main(stdscr: curses.window) -> None:
+def _main(stdscr: _WindowLike) -> None:
     curses.curs_set(0)
     stdscr.nodelay(True)
     stdscr.keypad(True)
@@ -74,7 +96,7 @@ def _main(stdscr: curses.window) -> None:
         time.sleep(0.01)
 
 
-def _render(stdscr: curses.window, game: Game, paused: bool) -> None:
+def _render(stdscr: _WindowLike, game: GameProtocol, paused: bool) -> None:
     stdscr.erase()
     state = game.state
     offset_x = 2

@@ -20,6 +20,7 @@
 ## Public API for game logic
 
 Use `snake_game.game` for imports in tests or external code. It re-exports the core symbols and keeps a stable import path even if internal module locations change.
+The package ships a `py.typed` marker (PEP 561) so type checkers can use the inline annotations.
 
 Example:
 ```python

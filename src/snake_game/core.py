@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from random import Random
-from typing import Iterable, Protocol
+from typing import Protocol
 
 Direction = tuple[int, int]
 Position = tuple[int, int]
@@ -17,7 +18,7 @@ OPPOSITE: dict[Direction, Direction] = {UP: DOWN, DOWN: UP, LEFT: RIGHT, RIGHT: 
 
 @dataclass(frozen=True)
 class StepResult:
-    state: "GameState"
+    state: GameState
     grew: bool
     game_over: bool
 
@@ -41,12 +42,12 @@ class MovementStrategy(Protocol):
     def next_head(self, state: GameState) -> Position: ...
 
 
-class StandardMovementStrategy:
+class StandardMovementStrategy(MovementStrategy):
     def next_head(self, state: GameState) -> Position:
-        return (state.head[0] + state.direction[0], state.head[1] + state.direction[1])
+        return state.head[0] + state.direction[0], state.head[1] + state.direction[1]
 
 
-class WraparoundMovementStrategy:
+class WraparoundMovementStrategy(MovementStrategy):
     def next_head(self, state: GameState) -> Position:
         x = (state.head[0] + state.direction[0]) % state.width
         y = (state.head[1] + state.direction[1]) % state.height
@@ -62,7 +63,20 @@ EVENT_RESET = "reset"
 EVENT_GAME_OVER = "game_over"
 
 
-class Game:
+class GameProtocol(Protocol):
+    @property
+    def state(self) -> GameState: ...
+
+    def set_direction(self, direction: Direction) -> None: ...
+
+    def reset(self) -> None: ...
+
+    def step(self) -> StepResult: ...
+
+    def add_observer(self, observer: GameObserver) -> None: ...
+
+
+class Game(GameProtocol):
     def __init__(
         self,
         width: int = 20,
@@ -76,6 +90,8 @@ class Game:
         self._observers: list[GameObserver] = []
         self._rng = Random(seed)
         self._init_state(width, height)
+
+    _state: GameState
 
     @property
     def state(self) -> GameState:
@@ -95,10 +111,6 @@ class Game:
             return
         self._observers.append(observer)
 
-    def remove_observer(self, observer: GameObserver) -> None:
-        if observer in self._observers:
-            self._observers.remove(observer)
-
     def step(self) -> StepResult:
         if not self._state.alive:
             return StepResult(self._state, grew=False, game_over=True)
@@ -113,11 +125,11 @@ class Game:
 
         grew = next_head == self._state.food
         if grew:
-            new_snake = (next_head,) + self._state.snake
+            new_snake = (next_head, *self._state.snake)
             food = self._place_food(new_snake)
             score = self._state.score + 1
         else:
-            new_snake = (next_head,) + self._state.snake[:-1]
+            new_snake = (next_head, *self._state.snake[:-1])
             food = self._state.food
             score = self._state.score
 
@@ -134,9 +146,6 @@ class Game:
         self._rng = Random(None)
         self._init_state(width, height)
         self._notify(EVENT_RESET)
-
-    def _next_head(self, head: Position, direction: Direction) -> Position:
-        return (head[0] + direction[0], head[1] + direction[1])
 
     def _hits_wall(self, pos: Position) -> bool:
         return (
@@ -155,7 +164,7 @@ class Game:
             if (x, y) not in occupied
         ]
         if not free:
-            return (-1, -1)
+            return -1, -1
         return self._rng.choice(free)
 
     def _end_game(self) -> StepResult:
