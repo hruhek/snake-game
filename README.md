@@ -1,6 +1,6 @@
 # Snake Game (Terminal)
 
-Classic Snake in the terminal using Python's built-in `curses`.
+Classic Snake in the terminal using Python's built-in `curses` and `pygame`.
 
 ## Run
 

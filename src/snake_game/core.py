@@ -41,12 +41,12 @@ class MovementStrategy(Protocol):
     def next_head(self, state: GameState) -> Position: ...
 
 
-class StandardMovementStrategy:
+class StandardMovementStrategy(MovementStrategy):
     def next_head(self, state: GameState) -> Position:
         return (state.head[0] + state.direction[0], state.head[1] + state.direction[1])
 
 
-class WraparoundMovementStrategy:
+class WraparoundMovementStrategy(MovementStrategy):
     def next_head(self, state: GameState) -> Position:
         x = (state.head[0] + state.direction[0]) % state.width
         y = (state.head[1] + state.direction[1]) % state.height
@@ -62,7 +62,22 @@ EVENT_RESET = "reset"
 EVENT_GAME_OVER = "game_over"
 
 
-class Game:
+class GameProtocol(Protocol):
+    @property
+    def state(self) -> GameState: ...
+
+    def set_direction(self, direction: Direction) -> None: ...
+
+    def reset(self) -> None: ...
+
+    def step(self) -> StepResult: ...
+
+    def add_observer(self, observer: GameObserver) -> None: ...
+
+    def remove_observer(self, observer: GameObserver) -> None: ...
+
+
+class Game(GameProtocol):
     def __init__(
         self,
         width: int = 20,
@@ -76,6 +91,8 @@ class Game:
         self._observers: list[GameObserver] = []
         self._rng = Random(seed)
         self._init_state(width, height)
+
+    _state: GameState
 
     @property
     def state(self) -> GameState:

@@ -1,6 +1,6 @@
 PYTHON := uv run -m
 
-.PHONY: help run run-ui test lint lint-fix format
+.PHONY: help run run-ui test lint lint-fix format type-check qa
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -22,3 +22,8 @@ lint-fix: ## Apply ruff auto-fixes
 
 format: ## Format code with ruff
 	uv run ruff format .
+
+type-check: ## Run mypy type checks
+	uv run mypy src
+
+qa: format lint-fix type-check test ## Run full QA pipeline

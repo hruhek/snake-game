@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 import snake_game.pygame_ui as ui
-from snake_game.core import RIGHT, GameState
+from snake_game.core import RIGHT, GameProtocol, GameState, StepResult
 
 
 class FakeSurface:
@@ -24,7 +24,7 @@ class FakeRect:
         self.args = (x, y, w, h)
 
 
-class FakeGame:
+class FakeGame(GameProtocol):
     def __init__(self, width=20, height=15):
         self._state = GameState(
             width=width,
@@ -59,6 +59,7 @@ class FakeGame:
         self.step_calls += 1
         for observer in list(self._observers):
             observer.on_state_change(self._state, "step")
+        return StepResult(self._state, grew=False, game_over=False)
 
     def add_observer(self, observer):
         if observer not in self._observers:
@@ -226,9 +227,7 @@ def test_render_status_and_food(monkeypatch):
 
     rect_calls.clear()
     drawn_text.clear()
-    game._state = GameState(
-        **{**game.state.__dict__, "food": (4, 4), "alive": False}
-    )
+    game._state = GameState(**{**game.state.__dict__, "food": (4, 4), "alive": False})
     ui._render(
         surface,
         game,

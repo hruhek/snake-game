@@ -4,7 +4,15 @@ from typing import Callable
 
 import pygame
 
-from snake_game.core import DOWN, LEFT, RIGHT, UP, Game, GameFactory, GameObserver
+from snake_game.core import (
+    DOWN,
+    LEFT,
+    RIGHT,
+    UP,
+    GameFactory,
+    GameObserver,
+    GameProtocol,
+)
 
 KEY_MAP = {
     pygame.K_UP: UP,
@@ -44,7 +52,7 @@ class _PygameObserver(GameObserver):
     def __init__(
         self,
         screen: pygame.Surface,
-        game: Game,
+        game: GameProtocol,
         paused_getter: Callable[[], bool],
         font: _FontLike | None,
         small_font: _FontLike | None,
@@ -126,7 +134,7 @@ def _main() -> None:
 
 def _render(
     screen: pygame.Surface,
-    game: Game,
+    game: GameProtocol,
     paused: bool,
     font: _FontLike | None,
     small_font: _FontLike | None,
@@ -170,9 +178,7 @@ def _render(
     controls_line_two = "R restart, Q quit"
     _draw_text(screen, font, status_line, (PADDING, PADDING + grid_h + 14))
     _draw_text(screen, small_font, controls_line, (PADDING, PADDING + grid_h + 42))
-    _draw_text(
-        screen, small_font, controls_line_two, (PADDING, PADDING + grid_h + 62)
-    )
+    _draw_text(screen, small_font, controls_line_two, (PADDING, PADDING + grid_h + 62))
 
     pygame.display.flip()
 

@@ -23,8 +23,15 @@ select = ["E", "F", "I", "B"]
 [tool.ruff.format]
 quote-style = "double"
 
+[tool.mypy]
+python_version = "3.13"
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
 [dependency-groups]
 dev = [
+    "mypy>=1.0.0",
     "pytest>=9.0.2",
     "pytest-cov>=6.0.0",
     "ruff>=0.14.14",

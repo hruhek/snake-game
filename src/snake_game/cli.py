@@ -4,7 +4,15 @@ import curses
 import time
 from typing import Callable
 
-from snake_game.core import DOWN, LEFT, RIGHT, UP, Game, GameFactory, GameObserver
+from snake_game.core import (
+    DOWN,
+    LEFT,
+    RIGHT,
+    UP,
+    GameFactory,
+    GameObserver,
+    GameProtocol,
+)
 
 KEY_MAP = {
     curses.KEY_UP: UP,
@@ -24,7 +32,10 @@ def run() -> None:
 
 class _CursesObserver(GameObserver):
     def __init__(
-        self, stdscr: curses.window, game: Game, paused_getter: Callable[[], bool]
+        self,
+        stdscr: curses.window,
+        game: GameProtocol,
+        paused_getter: Callable[[], bool],
     ) -> None:
         self._stdscr = stdscr
         self._game = game
@@ -74,7 +85,7 @@ def _main(stdscr: curses.window) -> None:
         time.sleep(0.01)
 
 
-def _render(stdscr: curses.window, game: Game, paused: bool) -> None:
+def _render(stdscr: curses.window, game: GameProtocol, paused: bool) -> None:
     stdscr.erase()
     state = game.state
     offset_x = 2
