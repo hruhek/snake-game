@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import pygame
 
@@ -48,10 +49,22 @@ def run() -> None:
         pygame.quit()
 
 
+class _SurfaceLike(Protocol):
+    def fill(self, color: tuple[int, int, int]) -> object: ...
+    def blit(self, source: pygame.Surface, dest: tuple[int, int]) -> object: ...
+
+
+@runtime_checkable
+class _RenderableFont(Protocol):
+    def render(
+        self, text: str, *args: object
+    ) -> pygame.Surface | tuple[pygame.Surface, object]: ...
+
+
 class _PygameObserver(GameObserver):
     def __init__(
         self,
-        screen: pygame.Surface,
+        screen: _SurfaceLike,
         game: GameProtocol,
         paused_getter: Callable[[], bool],
         font: _FontLike | None,
@@ -133,7 +146,7 @@ def _main() -> None:
 
 
 def _render(
-    screen: pygame.Surface,
+    screen: _SurfaceLike,
     game: GameProtocol,
     paused: bool,
     font: _FontLike | None,
@@ -144,8 +157,8 @@ def _render(
     screen.fill(COLOR_BG)
 
     grid_rect = pygame.Rect(PADDING, PADDING, grid_w, grid_h)
-    pygame.draw.rect(screen, COLOR_GRID, grid_rect)
-    pygame.draw.rect(screen, COLOR_BORDER, grid_rect, width=2)
+    _draw_rect(screen, COLOR_GRID, grid_rect)
+    _draw_rect(screen, COLOR_BORDER, grid_rect, width=2)
 
     state = game.state
     for index, (x, y) in enumerate(state.snake):
@@ -156,7 +169,7 @@ def _render(
             CELL_SIZE,
             CELL_SIZE,
         )
-        pygame.draw.rect(screen, color, rect)
+        _draw_rect(screen, color, rect)
 
     food_x, food_y = state.food
     if state.alive and food_x >= 0:
@@ -166,7 +179,7 @@ def _render(
             CELL_SIZE,
             CELL_SIZE,
         )
-        pygame.draw.rect(screen, COLOR_FOOD, rect)
+        _draw_rect(screen, COLOR_FOOD, rect)
 
     status = "GAME OVER" if not state.alive else "PAUSED" if paused else "RUNNING"
 
@@ -181,6 +194,25 @@ def _render(
 
 
 _FontLike = object
+
+
+if TYPE_CHECKING:
+
+    def _draw_rect(
+        screen: _SurfaceLike,
+        color: tuple[int, int, int],
+        rect: pygame.Rect,
+        width: int = 0,
+    ) -> None: ...
+else:
+
+    def _draw_rect(
+        screen: _SurfaceLike,
+        color: tuple[int, int, int],
+        rect: pygame.Rect,
+        width: int = 0,
+    ) -> None:
+        pygame.draw.rect(screen, color, rect, width)
 
 
 def _load_fonts() -> tuple[_FontLike | None, _FontLike | None]:
@@ -201,7 +233,7 @@ def _load_fonts() -> tuple[_FontLike | None, _FontLike | None]:
 
 
 def _draw_text(
-    screen: pygame.Surface,
+    screen: _SurfaceLike,
     font: _FontLike | None,
     text: str,
     pos: tuple[int, int],
@@ -210,14 +242,13 @@ def _draw_text(
         _draw_bitmap_text(screen, text, pos, COLOR_TEXT)
         return
 
-    render = getattr(font, "render", None)
-    if render is None:
+    if not isinstance(font, _RenderableFont):
         return
 
     try:
-        result = render(text, True, COLOR_TEXT)
+        result = font.render(text, True, COLOR_TEXT)
     except TypeError:
-        result = render(text, COLOR_TEXT)
+        result = font.render(text, COLOR_TEXT)
 
     surface = result[0] if isinstance(result, tuple) else result
 
@@ -269,7 +300,7 @@ _BITMAP_FONT: dict[str, list[str]] = {
 
 
 def _draw_bitmap_text(
-    screen: pygame.Surface,
+    screen: _SurfaceLike,
     text: str,
     pos: tuple[int, int],
     color: tuple[int, int, int],
@@ -295,7 +326,7 @@ def _draw_bitmap_text(
                             pixel,
                             pixel,
                         )
-                        pygame.draw.rect(screen, color, rect)
+                        _draw_rect(screen, color, rect)
             cursor_x += (5 * pixel) + (spacing * 2)
         y += line_height
 

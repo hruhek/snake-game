@@ -1,5 +1,5 @@
 import sys
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -256,7 +256,10 @@ def test_load_fonts_fallback(monkeypatch):
         def init(self):
             raise NotImplementedError
 
-    class FakeFreeType:
+    class FakeFreeType(ModuleType):
+        def __init__(self):
+            super().__init__("pygame.freetype")
+
         def init(self):
             return None
 
@@ -272,7 +275,10 @@ def test_load_fonts_fallback(monkeypatch):
 
 
 def test_load_fonts_none(monkeypatch):
-    class FakeFreeType:
+    class FakeFreeType(ModuleType):
+        def __init__(self):
+            super().__init__("pygame.freetype")
+
         def init(self):
             raise NotImplementedError
 
@@ -327,7 +333,7 @@ def test_draw_text_branches(monkeypatch):
 def test_draw_bitmap_text(monkeypatch):
     rect_calls = []
 
-    def fake_rect(_screen, _color, rect):
+    def fake_rect(_screen, _color, rect, width=0):
         rect_calls.append(rect.args)
 
     monkeypatch.setattr(ui.pygame, "Rect", FakeRect)
