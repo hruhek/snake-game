@@ -1,15 +1,13 @@
-PYTHON := uv run -m
-
 .PHONY: help run run-ui test lint lint-fix format type-check qa
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 run: ## Run terminal UI
-	$(PYTHON) snake_game
+	uv run -m snake_game
 
 run-ui: ## Run pygame UI
-	$(PYTHON) snake_game.pygame_ui
+	uv run -m snake_game.pygame_ui
 
 test: ## Run tests with coverage
 	uv run pytest --cov=snake_game --cov-report=term-missing --cov-fail-under=100
