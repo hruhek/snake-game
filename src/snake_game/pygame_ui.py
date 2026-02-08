@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import pygame
 
@@ -168,10 +168,7 @@ def _render(
         )
         pygame.draw.rect(screen, COLOR_FOOD, rect)
 
-    if not state.alive:
-        status = "GAME OVER"
-    else:
-        status = "PAUSED" if paused else "RUNNING"
+    status = "GAME OVER" if not state.alive else "PAUSED" if paused else "RUNNING"
 
     status_line = f"Score: {state.score}  {status}"
     controls_line = "Controls: arrows/WASD move, P pause"
@@ -222,10 +219,7 @@ def _draw_text(
     except TypeError:
         result = render(text, COLOR_TEXT)
 
-    if isinstance(result, tuple):
-        surface = result[0]
-    else:
-        surface = result
+    surface = result[0] if isinstance(result, tuple) else result
 
     screen.blit(surface, pos)
 

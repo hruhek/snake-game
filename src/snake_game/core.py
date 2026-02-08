@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from random import Random
-from typing import Iterable, Protocol
+from typing import Protocol
 
 Direction = tuple[int, int]
 Position = tuple[int, int]
@@ -17,7 +18,7 @@ OPPOSITE: dict[Direction, Direction] = {UP: DOWN, DOWN: UP, LEFT: RIGHT, RIGHT: 
 
 @dataclass(frozen=True)
 class StepResult:
-    state: "GameState"
+    state: GameState
     grew: bool
     game_over: bool
 
@@ -43,7 +44,7 @@ class MovementStrategy(Protocol):
 
 class StandardMovementStrategy(MovementStrategy):
     def next_head(self, state: GameState) -> Position:
-        return (state.head[0] + state.direction[0], state.head[1] + state.direction[1])
+        return state.head[0] + state.direction[0], state.head[1] + state.direction[1]
 
 
 class WraparoundMovementStrategy(MovementStrategy):
@@ -130,11 +131,11 @@ class Game(GameProtocol):
 
         grew = next_head == self._state.food
         if grew:
-            new_snake = (next_head,) + self._state.snake
+            new_snake = (next_head, *self._state.snake)
             food = self._place_food(new_snake)
             score = self._state.score + 1
         else:
-            new_snake = (next_head,) + self._state.snake[:-1]
+            new_snake = (next_head, *self._state.snake[:-1])
             food = self._state.food
             score = self._state.score
 
@@ -153,7 +154,7 @@ class Game(GameProtocol):
         self._notify(EVENT_RESET)
 
     def _next_head(self, head: Position, direction: Direction) -> Position:
-        return (head[0] + direction[0], head[1] + direction[1])
+        return head[0] + direction[0], head[1] + direction[1]
 
     def _hits_wall(self, pos: Position) -> bool:
         return (

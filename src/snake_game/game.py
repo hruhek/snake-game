@@ -1,6 +1,6 @@
 """Backward-compatible re-exports for the core game logic."""
 
-from snake_game.core import (  # noqa: F401
+from snake_game.core import (
     DOWN,
     EVENT_GAME_OVER,
     EVENT_RESET,
@@ -30,8 +30,8 @@ __all__ = [
     "UP",
     "Game",
     "GameFactory",
-    "GameProtocol",
     "GameObserver",
+    "GameProtocol",
     "GameState",
     "MovementStrategy",
     "StandardMovementStrategy",

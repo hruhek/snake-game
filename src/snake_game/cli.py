@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import curses
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from snake_game.core import (
     DOWN,

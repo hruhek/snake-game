@@ -18,7 +18,16 @@ pythonpath = ["src"]
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B"]
+select = [
+  "E",   # pycodestyle (errors)
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # bugbear
+  "UP",  # pyupgrade
+  "SIM", # simplify
+  "C4",  # comprehensions
+  "RUF", # ruff-specific
+]
 
 [tool.ruff.format]
 quote-style = "double"
