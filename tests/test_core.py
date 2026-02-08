@@ -12,6 +12,8 @@ from snake_game.core import (
     UP,
     Game,
     GameFactory,
+    GameState,
+    StandardMovementStrategy,
     WraparoundGameFactory,
     WraparoundMovementStrategy,
 )
@@ -86,8 +88,10 @@ def test_hits_wall_boundaries():
 
 
 def test_next_head_math():
-    game = Game(width=5, height=5, seed=1)
-    assert game._next_head((2, 2), UP) == (2, 1)
+    state = Game(width=5, height=5, seed=1).state
+    state = GameState(**{**state.__dict__, "direction": UP})
+    expected = (state.head[0], state.head[1] - 1)
+    assert StandardMovementStrategy().next_head(state) == expected
 
 
 def test_place_food_full_grid_returns_sentinel():
@@ -263,23 +267,6 @@ def test_observer_duplicate_add_not_notified_twice():
     game.add_observer(observer)
     game.step()
 
-    assert events == [EVENT_STEP]
-
-
-def test_remove_observer_stops_all_future_notifications():
-    game = Game(width=5, height=5, seed=1)
-    events: list[str] = []
-
-    class Observer:
-        def on_state_change(self, state, event):
-            events.append(event)
-
-    observer = Observer()
-    game.add_observer(observer)
-    game.step()
-    game.remove_observer(observer)
-    game.reset()
-    game.step()
     assert events == [EVENT_STEP]
 
 

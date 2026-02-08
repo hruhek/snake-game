@@ -75,8 +75,6 @@ class GameProtocol(Protocol):
 
     def add_observer(self, observer: GameObserver) -> None: ...
 
-    def remove_observer(self, observer: GameObserver) -> None: ...
-
 
 class Game(GameProtocol):
     def __init__(
@@ -112,10 +110,6 @@ class Game(GameProtocol):
         if observer in self._observers:
             return
         self._observers.append(observer)
-
-    def remove_observer(self, observer: GameObserver) -> None:
-        if observer in self._observers:
-            self._observers.remove(observer)
 
     def step(self) -> StepResult:
         if not self._state.alive:
@@ -153,9 +147,6 @@ class Game(GameProtocol):
         self._init_state(width, height)
         self._notify(EVENT_RESET)
 
-    def _next_head(self, head: Position, direction: Direction) -> Position:
-        return head[0] + direction[0], head[1] + direction[1]
-
     def _hits_wall(self, pos: Position) -> bool:
         return (
             pos[0] < 0
@@ -173,7 +164,7 @@ class Game(GameProtocol):
             if (x, y) not in occupied
         ]
         if not free:
-            return (-1, -1)
+            return -1, -1
         return self._rng.choice(free)
 
     def _end_game(self) -> StepResult:

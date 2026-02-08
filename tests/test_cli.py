@@ -86,10 +86,6 @@ class FakeGame(GameProtocol):
         if observer not in self._observers:
             self._observers.append(observer)
 
-    def remove_observer(self, observer):
-        if observer in self._observers:
-            self._observers.remove(observer)
-
 
 def test_run_calls_curses_wrapper(monkeypatch):
     called = {}
