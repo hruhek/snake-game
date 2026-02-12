@@ -1,5 +1,4 @@
-import sys
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
 
 import pytest
 from test_support import FakeGame
@@ -10,14 +9,10 @@ from snake_game.core import GameState
 
 class FakeSurface:
     def __init__(self):
-        self.blit_calls = []
         self.fill_calls = []
 
     def fill(self, color):
         self.fill_calls.append(color)
-
-    def blit(self, surface, pos):
-        self.blit_calls.append((surface, pos))
 
 
 class FakeRect:
@@ -38,12 +33,12 @@ def patch_main_dependencies(
     factory_for_game,
 ):
     monkeypatch.setattr(ui, "GameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(ui, "WraparoundGameFactory", factory_for_game(fake_game))
     monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
     monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
     monkeypatch.setattr(ui.pygame.event, "get", fake_events)
     monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
     monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(ui, "_load_fonts", lambda: (None, None))
 
 
 def test_run_calls_init_and_quit(monkeypatch):
@@ -131,6 +126,44 @@ def test_main_paused_flips_display(monkeypatch, fake_game_factory, factory_for_g
     assert flips["count"] >= 1
 
 
+def test_main_toggles_wraparound(monkeypatch, fake_game_factory):
+    standard_game = fake_game_factory(snake=((2, 2),))
+    wrap_game = fake_game_factory(snake=((3, 2),))
+    surface = FakeSurface()
+    calls = {"standard": 0, "wrap": 0}
+
+    class StandardFactory:
+        def create(self, width=20, height=15, seed=None):
+            del width, height, seed
+            calls["standard"] += 1
+            return standard_game
+
+    class WrapFactory:
+        def create(self, width=20, height=15, seed=None):
+            del width, height, seed
+            calls["wrap"] += 1
+            return wrap_game
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_t),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+        ]
+
+    monkeypatch.setattr(ui, "GameFactory", StandardFactory)
+    monkeypatch.setattr(ui, "WraparoundGameFactory", WrapFactory)
+    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
+    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
+    monkeypatch.setattr(ui.pygame.event, "get", fake_events)
+    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
+    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
+
+    ui._main()
+
+    assert calls["standard"] == 1
+    assert calls["wrap"] == 1
+
+
 def test_render_status_and_food(monkeypatch):
     surface = FakeSurface()
     rect_calls = []
@@ -140,7 +173,7 @@ def test_render_status_and_food(monkeypatch):
 
     drawn_text = []
 
-    def fake_draw_text(_screen, _font, text, _pos):
+    def fake_draw_text(_screen, text, _pos):
         drawn_text.append(text)
 
     monkeypatch.setattr(ui.pygame, "Rect", FakeRect)
@@ -156,13 +189,14 @@ def test_render_status_and_food(monkeypatch):
         surface,
         game,
         paused=True,
-        font=object(),
-        small_font=object(),
+        wraparound_enabled=True,
         grid_w=56,
         grid_h=56,
     )
 
     assert any("PAUSED" in text for text in drawn_text)
+    assert any("Wrap: ON" in text for text in drawn_text)
+    assert any("toggle wrap" in text for text in drawn_text)
     assert any(color == ui.COLOR_FOOD for color, _width in rect_calls)
 
     rect_calls.clear()
@@ -172,106 +206,26 @@ def test_render_status_and_food(monkeypatch):
         surface,
         game,
         paused=False,
-        font=object(),
-        small_font=object(),
+        wraparound_enabled=False,
         grid_w=56,
         grid_h=56,
     )
     assert any("GAME OVER" in text for text in drawn_text)
+    assert any("Wrap: OFF" in text for text in drawn_text)
     assert not any(color == ui.COLOR_FOOD for color, _width in rect_calls)
 
 
-def test_load_fonts_primary(monkeypatch):
-    class FakeFontModule:
-        def init(self):
-            return None
+def test_draw_text_uses_bitmap(monkeypatch):
+    calls = []
 
-        def Font(self, _name, _size):
-            return object()
-
-    monkeypatch.setattr(ui.pygame, "font", FakeFontModule())
-    font, small_font = ui._load_fonts()
-    assert font is not None
-    assert small_font is not None
-
-
-def test_load_fonts_fallback(monkeypatch):
-    class FakeFontModule:
-        def init(self):
-            raise NotImplementedError
-
-    class FakeFreeType(ModuleType):
-        def __init__(self):
-            super().__init__("pygame.freetype")
-
-        def init(self):
-            return None
-
-        def Font(self, _name, _size):
-            return object()
-
-    monkeypatch.setattr(ui.pygame, "font", FakeFontModule())
-    monkeypatch.setitem(sys.modules, "pygame.freetype", FakeFreeType())
-
-    font, small_font = ui._load_fonts()
-    assert font is not None
-    assert small_font is not None
-
-
-def test_load_fonts_none(monkeypatch):
-    class FakeFreeType(ModuleType):
-        def __init__(self):
-            super().__init__("pygame.freetype")
-
-        def init(self):
-            raise NotImplementedError
-
-    monkeypatch.setattr(ui.pygame, "font", None)
-    monkeypatch.setitem(sys.modules, "pygame.freetype", FakeFreeType())
-
-    font, small_font = ui._load_fonts()
-    assert font is None
-    assert small_font is None
-
-
-def test_draw_text_branches(monkeypatch):
-    surface = FakeSurface()
-    draw_calls = []
-
-    def fake_bitmap(_screen, _text, _pos, _color):
-        draw_calls.append("bitmap")
+    def fake_bitmap(_screen, text, pos, color):
+        calls.append((text, pos, color))
 
     monkeypatch.setattr(ui, "_draw_bitmap_text", fake_bitmap)
 
-    ui._draw_text(surface, None, "HI", (0, 0))
-    assert draw_calls == ["bitmap"]
+    ui._draw_text(FakeSurface(), "HI", (2, 3))
 
-    class NoRenderFont:
-        pass
-
-    ui._draw_text(surface, NoRenderFont(), "HI", (0, 0))
-    assert surface.blit_calls == []
-
-    class SurfaceFont:
-        def render(self, _text, *_args):
-            return "surface"
-
-    ui._draw_text(surface, SurfaceFont(), "HI", (0, 0))
-    assert surface.blit_calls[-1] == ("surface", (0, 0))
-
-    class TupleFont:
-        def render(self, _text, *_args):
-            return ("tuple-surface", None)
-
-    ui._draw_text(surface, TupleFont(), "HI", (1, 1))
-    assert surface.blit_calls[-1] == ("tuple-surface", (1, 1))
-
-    class TwoArgFont:
-        def render(self, _text, _color):
-            return "two-arg"
-
-    ui._draw_text(surface, TwoArgFont(), "HI", (2, 2))
-    assert surface.blit_calls[-1] == ("two-arg", (2, 2))
+    assert calls == [("HI", (2, 3), ui.COLOR_TEXT)]
 
 
 def test_draw_bitmap_text(monkeypatch):

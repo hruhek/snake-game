@@ -13,6 +13,7 @@ Source: `src/snake_game/cli.py`
 
 - Grid size: `Game(width=20, height=15)`
 - Tick rate: `tick_seconds = 0.12`
+- Wrap-around: toggled at runtime with `T` (default: OFF)
 
 ### Pygame UI
 
@@ -24,3 +25,4 @@ Source: `src/snake_game/pygame_ui.py`
 - Cell size: `CELL_SIZE = 28`
 - Padding: `PADDING = 20`
 - Info panel height: `INFO_HEIGHT = 92`
+- Wrap-around: toggled at runtime with `T` (default: OFF)

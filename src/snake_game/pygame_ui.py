@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol
 
 import pygame
 
@@ -13,6 +13,7 @@ from snake_game.core import (
     GameFactory,
     GameObserver,
     GameProtocol,
+    WraparoundGameFactory,
 )
 
 KEY_MAP = {
@@ -51,14 +52,6 @@ def run() -> None:
 
 class _SurfaceLike(Protocol):
     def fill(self, color: tuple[int, int, int]) -> object: ...
-    def blit(self, source: pygame.Surface, dest: tuple[int, int]) -> object: ...
-
-
-@runtime_checkable
-class _RenderableFont(Protocol):
-    def render(
-        self, text: str, *args: object
-    ) -> pygame.Surface | tuple[pygame.Surface, object]: ...
 
 
 class _PygameObserver(GameObserver):
@@ -67,16 +60,14 @@ class _PygameObserver(GameObserver):
         screen: _SurfaceLike,
         game: GameProtocol,
         paused_getter: Callable[[], bool],
-        font: _FontLike | None,
-        small_font: _FontLike | None,
+        wraparound_getter: Callable[[], bool],
         grid_w: int,
         grid_h: int,
     ) -> None:
         self._screen = screen
         self._game = game
         self._paused_getter = paused_getter
-        self._font = font
-        self._small_font = small_font
+        self._wraparound_getter = wraparound_getter
         self._grid_w = grid_w
         self._grid_h = grid_h
 
@@ -85,17 +76,24 @@ class _PygameObserver(GameObserver):
             self._screen,
             self._game,
             self._paused_getter(),
-            self._font,
-            self._small_font,
+            self._wraparound_getter(),
             self._grid_w,
             self._grid_h,
         )
 
 
 def _main() -> None:
-    factory = GameFactory()
-    game = factory.create(width=20, height=15)
+    width = 20
+    height = 15
+    wraparound_enabled = False
+    game = _create_game(wraparound_enabled, width, height)
     paused = False
+
+    def _paused_getter() -> bool:
+        return paused
+
+    def _wraparound_getter() -> bool:
+        return wraparound_enabled
 
     grid_w = game.state.width * CELL_SIZE
     grid_h = game.state.height * CELL_SIZE
@@ -105,16 +103,15 @@ def _main() -> None:
     screen = pygame.display.set_mode((screen_w, screen_h))
     pygame.display.set_caption("Snake")
 
-    font, small_font = _load_fonts()
     observer = _PygameObserver(
-        screen, game, lambda: paused, font, small_font, grid_w, grid_h
+        screen, game, _paused_getter, _wraparound_getter, grid_w, grid_h
     )
     game.add_observer(observer)
     clock = pygame.time.Clock()
     time_since_tick = 0.0
     running = True
 
-    _render(screen, game, paused, font, small_font, grid_w, grid_h)
+    _render(screen, game, paused, wraparound_enabled, grid_w, grid_h)
 
     while running:
         dt = clock.tick(FPS) / 1000
@@ -130,12 +127,27 @@ def _main() -> None:
                     running = False
                 elif event.key == pygame.K_p:
                     paused = not paused
-                    _render(screen, game, paused, font, small_font, grid_w, grid_h)
+                    _render(screen, game, paused, wraparound_enabled, grid_w, grid_h)
                 elif event.key == pygame.K_r:
                     game.reset()
                     paused = False
                     time_since_tick = 0.0
-                    _render(screen, game, paused, font, small_font, grid_w, grid_h)
+                    _render(screen, game, paused, wraparound_enabled, grid_w, grid_h)
+                elif event.key == pygame.K_t:
+                    wraparound_enabled = not wraparound_enabled
+                    game = _create_game(wraparound_enabled, width, height)
+                    observer = _PygameObserver(
+                        screen,
+                        game,
+                        _paused_getter,
+                        _wraparound_getter,
+                        grid_w,
+                        grid_h,
+                    )
+                    game.add_observer(observer)
+                    paused = False
+                    time_since_tick = 0.0
+                    _render(screen, game, paused, wraparound_enabled, grid_w, grid_h)
 
         if not paused and time_since_tick >= TICK_SECONDS:
             game.step()
@@ -149,8 +161,7 @@ def _render(
     screen: _SurfaceLike,
     game: GameProtocol,
     paused: bool,
-    font: _FontLike | None,
-    small_font: _FontLike | None,
+    wraparound_enabled: bool,
     grid_w: int,
     grid_h: int,
 ) -> None:
@@ -183,17 +194,20 @@ def _render(
 
     status = "GAME OVER" if not state.alive else "PAUSED" if paused else "RUNNING"
 
-    status_line = f"Score: {state.score}  {status}"
+    wrap_status = "ON" if wraparound_enabled else "OFF"
+    status_line = f"Score: {state.score}  {status}  Wrap: {wrap_status}"
     controls_line = "Controls: arrows/WASD move, P pause"
-    controls_line_two = "R restart, Q quit"
-    _draw_text(screen, font, status_line, (PADDING, PADDING + grid_h + 14))
-    _draw_text(screen, small_font, controls_line, (PADDING, PADDING + grid_h + 42))
-    _draw_text(screen, small_font, controls_line_two, (PADDING, PADDING + grid_h + 62))
+    controls_line_two = "R restart, T toggle wrap, Q quit"
+    _draw_text(screen, status_line, (PADDING, PADDING + grid_h + 14))
+    _draw_text(screen, controls_line, (PADDING, PADDING + grid_h + 42))
+    _draw_text(screen, controls_line_two, (PADDING, PADDING + grid_h + 62))
 
     pygame.display.flip()
 
 
-_FontLike = object
+def _create_game(wraparound_enabled: bool, width: int, height: int) -> GameProtocol:
+    factory = WraparoundGameFactory() if wraparound_enabled else GameFactory()
+    return factory.create(width=width, height=height)
 
 
 if TYPE_CHECKING:
@@ -215,44 +229,12 @@ else:
         pygame.draw.rect(screen, color, rect, width)
 
 
-def _load_fonts() -> tuple[_FontLike | None, _FontLike | None]:
-    try:
-        if pygame.font:
-            pygame.font.init()
-            return pygame.font.Font(None, 28), pygame.font.Font(None, 22)
-    except (AttributeError, NotImplementedError, ModuleNotFoundError):
-        pass
-
-    try:
-        import pygame.freetype as freetype
-
-        freetype.init()
-        return freetype.Font(None, 28), freetype.Font(None, 22)
-    except (ImportError, AttributeError, NotImplementedError, ModuleNotFoundError):
-        return None, None
-
-
 def _draw_text(
     screen: _SurfaceLike,
-    font: _FontLike | None,
     text: str,
     pos: tuple[int, int],
 ) -> None:
-    if font is None:
-        _draw_bitmap_text(screen, text, pos, COLOR_TEXT)
-        return
-
-    if not isinstance(font, _RenderableFont):
-        return
-
-    try:
-        result = font.render(text, True, COLOR_TEXT)
-    except TypeError:
-        result = font.render(text, COLOR_TEXT)
-
-    surface = result[0] if isinstance(result, tuple) else result
-
-    screen.blit(surface, pos)
+    _draw_bitmap_text(screen, text, pos, COLOR_TEXT)
 
 
 _BITMAP_FONT: dict[str, list[str]] = {

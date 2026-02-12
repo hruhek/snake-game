@@ -13,6 +13,7 @@ from snake_game.core import (
     GameFactory,
     GameObserver,
     GameProtocol,
+    WraparoundGameFactory,
 )
 
 KEY_MAP = {
@@ -47,13 +48,20 @@ class _CursesObserver(GameObserver):
         stdscr: _WindowLike,
         game: GameProtocol,
         paused_getter: Callable[[], bool],
+        wraparound_getter: Callable[[], bool],
     ) -> None:
         self._stdscr = stdscr
         self._game = game
         self._paused_getter = paused_getter
+        self._wraparound_getter = wraparound_getter
 
     def on_state_change(self, state: object, event: str) -> None:
-        _render(self._stdscr, self._game, self._paused_getter())
+        _render(
+            self._stdscr,
+            self._game,
+            self._paused_getter(),
+            self._wraparound_getter(),
+        )
 
 
 def _main(stdscr: _WindowLike) -> None:
@@ -61,16 +69,25 @@ def _main(stdscr: _WindowLike) -> None:
     stdscr.nodelay(True)
     stdscr.keypad(True)
 
-    factory = GameFactory()
-    game = factory.create(width=20, height=15)
+    width = 20
+    height = 15
+    wraparound_enabled = False
+    game = _create_game(wraparound_enabled, width, height)
     paused = False
-    observer = _CursesObserver(stdscr, game, lambda: paused)
+
+    def _paused_getter() -> bool:
+        return paused
+
+    def _wraparound_getter() -> bool:
+        return wraparound_enabled
+
+    observer = _CursesObserver(stdscr, game, _paused_getter, _wraparound_getter)
     game.add_observer(observer)
 
     tick_seconds = 0.12
     last_tick = time.monotonic()
 
-    _render(stdscr, game, paused)
+    _render(stdscr, game, paused, wraparound_enabled)
 
     while True:
         now = time.monotonic()
@@ -82,12 +99,20 @@ def _main(stdscr: _WindowLike) -> None:
             break
         elif key in (ord("p"), ord("P")):
             paused = not paused
-            _render(stdscr, game, paused)
+            _render(stdscr, game, paused, wraparound_enabled)
         elif key in (ord("r"), ord("R")):
             game.reset()
             paused = False
             last_tick = time.monotonic()
-            _render(stdscr, game, paused)
+            _render(stdscr, game, paused, wraparound_enabled)
+        elif key in (ord("t"), ord("T")):
+            wraparound_enabled = not wraparound_enabled
+            game = _create_game(wraparound_enabled, width, height)
+            observer = _CursesObserver(stdscr, game, _paused_getter, _wraparound_getter)
+            game.add_observer(observer)
+            paused = False
+            last_tick = time.monotonic()
+            _render(stdscr, game, paused, wraparound_enabled)
 
         if not paused and now - last_tick >= tick_seconds:
             game.step()
@@ -96,7 +121,14 @@ def _main(stdscr: _WindowLike) -> None:
         time.sleep(0.01)
 
 
-def _render(stdscr: _WindowLike, game: GameProtocol, paused: bool) -> None:
+def _create_game(wraparound_enabled: bool, width: int, height: int) -> GameProtocol:
+    factory = WraparoundGameFactory() if wraparound_enabled else GameFactory()
+    return factory.create(width=width, height=height)
+
+
+def _render(
+    stdscr: _WindowLike, game: GameProtocol, paused: bool, wraparound_enabled: bool
+) -> None:
     stdscr.erase()
     state = game.state
     offset_x = 2
@@ -125,10 +157,15 @@ def _render(stdscr: _WindowLike, game: GameProtocol, paused: bool) -> None:
     status = "PAUSED" if paused else "RUNNING"
     if not state.alive:
         status = "GAME OVER"
-    stdscr.addstr(offset_y + border_h + 1, offset_x, f"Score: {state.score}  {status}")
+    wrap_status = "ON" if wraparound_enabled else "OFF"
+    stdscr.addstr(
+        offset_y + border_h + 1,
+        offset_x,
+        f"Score: {state.score}  {status}  Wrap: {wrap_status}",
+    )
     stdscr.addstr(
         offset_y + border_h + 2,
         offset_x,
-        "Controls: arrows/WASD move, P pause, R restart, Q quit",
+        "Controls: arrows/WASD move, P pause, R restart, T toggle wrap, Q quit",
     )
     stdscr.refresh()

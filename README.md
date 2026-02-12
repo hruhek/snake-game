@@ -33,6 +33,7 @@ make format
 - Arrows / WASD: move
 - P: pause
 - R: restart
+- T: toggle wrap-around
 - Q: quit
 
 ## Alternatives

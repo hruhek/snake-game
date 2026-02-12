@@ -67,4 +67,6 @@ Pygame UI settings live in `src/snake_game/pygame_ui.py`:
 - Both UIs call `Game.set_direction(...)` and `Game.step()` on the same core logic.
 - Both UIs use `GameFactory` for construction and `GameObserver` notifications for rendering.
 - Both UIs support the same control scheme: arrows/WASD to move, `P` to pause,
-  `R` to restart, `Q` to quit.
+  `R` to restart, `T` to toggle wrap-around, `Q` to quit.
+- Wrap-around mode is runtime-selectable in each UI by switching between
+  `GameFactory` and `WraparoundGameFactory`.

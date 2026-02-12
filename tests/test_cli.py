@@ -53,6 +53,7 @@ def test_main_handles_keys_and_ticks(monkeypatch, fake_game_factory, factory_for
     fake_game = fake_game_factory()
     screen = FakeScreen(keys=[cli.curses.KEY_UP, -1, ord("p"), ord("r"), ord("q")])
     monkeypatch.setattr(cli, "GameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(cli, "WraparoundGameFactory", factory_for_game(fake_game))
     monkeypatch.setattr(cli, "_render", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(cli.curses, "curs_set", lambda _value: None)
     monkeypatch.setattr(time, "sleep", lambda _value: None)
@@ -75,14 +76,16 @@ def test_render_status_and_food():
     screen = FakeScreen(keys=[])
     game = Game(width=6, height=6, seed=1)
     game._state = GameState(**{**game.state.__dict__, "food": (1, 1), "score": 2})
-    cli._render(screen, game, paused=True)
+    cli._render(screen, game, paused=True, wraparound_enabled=True)
     assert any("PAUSED" in text for *_coords, text in screen.addstr_calls)
+    assert any("Wrap: ON" in text for *_coords, text in screen.addstr_calls)
     assert any(char == "*" for *_coords, char in screen.addch_calls)
 
     screen_over = FakeScreen(keys=[])
     game._state = GameState(**{**game.state.__dict__, "alive": False})
-    cli._render(screen_over, game, paused=False)
+    cli._render(screen_over, game, paused=False, wraparound_enabled=False)
     assert any("GAME OVER" in text for *_coords, text in screen_over.addstr_calls)
+    assert any("Wrap: OFF" in text for *_coords, text in screen_over.addstr_calls)
     assert not any(char == "*" for *_coords, char in screen_over.addch_calls)
 
 
@@ -90,5 +93,43 @@ def test_render_skips_invalid_food():
     screen = FakeScreen(keys=[])
     game = Game(width=6, height=6, seed=1)
     game._state = GameState(**{**game.state.__dict__, "food": (-1, -1)})
-    cli._render(screen, game, paused=False)
+    cli._render(screen, game, paused=False, wraparound_enabled=False)
     assert not any(char == "*" for *_coords, char in screen.addch_calls)
+
+
+def test_main_toggles_wraparound(monkeypatch, fake_game_factory):
+    standard_game = fake_game_factory()
+    wrap_game = fake_game_factory()
+    screen = FakeScreen(keys=[ord("t"), ord("q")])
+    calls = {"standard": 0, "wrap": 0}
+
+    class StandardFactory:
+        def create(self, width=20, height=15, seed=None):
+            del width, height, seed
+            calls["standard"] += 1
+            return standard_game
+
+    class WrapFactory:
+        def create(self, width=20, height=15, seed=None):
+            del width, height, seed
+            calls["wrap"] += 1
+            return wrap_game
+
+    monkeypatch.setattr(cli, "GameFactory", StandardFactory)
+    monkeypatch.setattr(cli, "WraparoundGameFactory", WrapFactory)
+    monkeypatch.setattr(cli, "_render", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(cli.curses, "curs_set", lambda _value: None)
+    monkeypatch.setattr(time, "sleep", lambda _value: None)
+
+    counter = {"t": 0.0}
+
+    def fake_monotonic():
+        counter["t"] += 0.2
+        return counter["t"]
+
+    monkeypatch.setattr(time, "monotonic", fake_monotonic)
+
+    cli._main(screen)
+
+    assert calls["standard"] == 1
+    assert calls["wrap"] == 1
