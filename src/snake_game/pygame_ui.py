@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol, cast
 
 import pygame
 
@@ -210,23 +210,13 @@ def _create_game(wraparound_enabled: bool, width: int, height: int) -> GameProto
     return factory.create(width=width, height=height)
 
 
-if TYPE_CHECKING:
-
-    def _draw_rect(
-        screen: _SurfaceLike,
-        color: tuple[int, int, int],
-        rect: pygame.Rect,
-        width: int = 0,
-    ) -> None: ...
-else:
-
-    def _draw_rect(
-        screen: _SurfaceLike,
-        color: tuple[int, int, int],
-        rect: pygame.Rect,
-        width: int = 0,
-    ) -> None:
-        pygame.draw.rect(screen, color, rect, width)
+def _draw_rect(
+    screen: _SurfaceLike,
+    color: tuple[int, int, int],
+    rect: pygame.Rect,
+    width: int = 0,
+) -> None:
+    pygame.draw.rect(cast(pygame.Surface, screen), color, rect, width)
 
 
 def _draw_text(
