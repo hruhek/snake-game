@@ -51,7 +51,7 @@ class WraparoundMovementStrategy(MovementStrategy):
     def next_head(self, state: GameState) -> Position:
         x = (state.head[0] + state.direction[0]) % state.width
         y = (state.head[1] + state.direction[1]) % state.height
-        return (x, y)
+        return x, y
 
 
 class GameObserver(Protocol):

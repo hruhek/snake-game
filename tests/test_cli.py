@@ -1,7 +1,7 @@
 import time
 
 import snake_game.cli as cli
-from snake_game.core import RIGHT, Game, GameProtocol, GameState, StepResult
+from snake_game.core import Game, GameState
 
 
 class FakeScreen:
@@ -38,55 +38,6 @@ class FakeScreen:
         self.refreshed = True
 
 
-class FakeGame(GameProtocol):
-    def __init__(self, width=20, height=15):
-        snake = ((2, 2), (1, 2), (0, 2))
-        self._state = GameState(
-            width=width,
-            height=height,
-            snake=snake,
-            direction=RIGHT,
-            food=(3, 2),
-            alive=True,
-            score=0,
-        )
-        self.set_direction_calls = []
-        self.reset_calls = 0
-        self.step_calls = 0
-        self._observers = []
-
-    @property
-    def state(self):
-        return self._state
-
-    def set_direction(self, direction):
-        self.set_direction_calls.append(direction)
-
-    def reset(self):
-        self.reset_calls += 1
-        self._state = GameState(
-            width=self._state.width,
-            height=self._state.height,
-            snake=((2, 2), (1, 2), (0, 2)),
-            direction=RIGHT,
-            food=(3, 2),
-            alive=True,
-            score=0,
-        )
-        for observer in list(self._observers):
-            observer.on_state_change(self._state, "reset")
-
-    def step(self):
-        self.step_calls += 1
-        for observer in list(self._observers):
-            observer.on_state_change(self._state, "step")
-        return StepResult(self._state, grew=False, game_over=False)
-
-    def add_observer(self, observer):
-        if observer not in self._observers:
-            self._observers.append(observer)
-
-
 def test_run_calls_curses_wrapper(monkeypatch):
     called = {}
 
@@ -98,15 +49,10 @@ def test_run_calls_curses_wrapper(monkeypatch):
     assert called["fn"] is cli._main
 
 
-def test_main_handles_keys_and_ticks(monkeypatch):
-    fake_game = FakeGame()
+def test_main_handles_keys_and_ticks(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory()
     screen = FakeScreen(keys=[cli.curses.KEY_UP, -1, ord("p"), ord("r"), ord("q")])
-
-    class FakeFactory:
-        def create(self, width=20, height=15, seed=None):
-            return fake_game
-
-    monkeypatch.setattr(cli, "GameFactory", FakeFactory)
+    monkeypatch.setattr(cli, "GameFactory", factory_for_game(fake_game))
     monkeypatch.setattr(cli, "_render", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(cli.curses, "curs_set", lambda _value: None)
     monkeypatch.setattr(time, "sleep", lambda _value: None)

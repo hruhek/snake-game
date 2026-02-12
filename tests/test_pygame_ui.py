@@ -2,9 +2,10 @@ import sys
 from types import ModuleType, SimpleNamespace
 
 import pytest
+from test_support import FakeGame
 
 import snake_game.pygame_ui as ui
-from snake_game.core import RIGHT, GameProtocol, GameState, StepResult
+from snake_game.core import GameState
 
 
 class FakeSurface:
@@ -24,46 +25,25 @@ class FakeRect:
         self.args = (x, y, w, h)
 
 
-class FakeGame(GameProtocol):
-    def __init__(self, width=20, height=15):
-        self._state = GameState(
-            width=width,
-            height=height,
-            snake=((2, 2),),
-            direction=RIGHT,
-            food=(3, 2),
-            alive=True,
-            score=0,
-        )
-        self.set_direction_calls = []
-        self.reset_calls = 0
-        self.step_calls = 0
-        self._observers = []
+class FakeClock:
+    def tick(self, _fps):
+        return 1000
 
-    @property
-    def state(self):
-        return self._state
 
-    def set_direction(self, direction):
-        self.set_direction_calls.append(direction)
-
-    def reset(self):
-        self.reset_calls += 1
-        self._state = GameState(
-            **{**self._state.__dict__, "score": 0, "alive": True, "direction": RIGHT}
-        )
-        for observer in list(self._observers):
-            observer.on_state_change(self._state, "reset")
-
-    def step(self):
-        self.step_calls += 1
-        for observer in list(self._observers):
-            observer.on_state_change(self._state, "step")
-        return StepResult(self._state, grew=False, game_over=False)
-
-    def add_observer(self, observer):
-        if observer not in self._observers:
-            self._observers.append(observer)
+def patch_main_dependencies(
+    monkeypatch,
+    fake_game,
+    surface,
+    fake_events,
+    factory_for_game,
+):
+    monkeypatch.setattr(ui, "GameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
+    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
+    monkeypatch.setattr(ui.pygame.event, "get", fake_events)
+    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
+    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "_load_fonts", lambda: (None, None))
 
 
 def test_run_calls_init_and_quit(monkeypatch):
@@ -89,8 +69,8 @@ def test_run_calls_init_and_quit(monkeypatch):
     assert calls["quit"] == 1
 
 
-def test_main_handles_key_events(monkeypatch):
-    fake_game = FakeGame()
+def test_main_handles_key_events(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
     surface = FakeSurface()
 
     def fake_events():
@@ -101,21 +81,9 @@ def test_main_handles_key_events(monkeypatch):
             SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
         ]
 
-    class FakeClock:
-        def tick(self, _fps):
-            return 1000
-
-    class FakeFactory:
-        def create(self, width=20, height=15, seed=None):
-            return fake_game
-
-    monkeypatch.setattr(ui, "GameFactory", FakeFactory)
-    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
-    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
-    monkeypatch.setattr(ui.pygame.event, "get", fake_events)
-    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
-    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(ui, "_load_fonts", lambda: (None, None))
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
 
     ui._main()
 
@@ -123,36 +91,24 @@ def test_main_handles_key_events(monkeypatch):
     assert fake_game.reset_calls == 1
 
 
-def test_main_steps_and_handles_quit(monkeypatch):
-    fake_game = FakeGame()
+def test_main_steps_and_handles_quit(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
     surface = FakeSurface()
 
     def fake_events():
         return [SimpleNamespace(type=ui.pygame.QUIT)]
 
-    class FakeClock:
-        def tick(self, _fps):
-            return 1000
-
-    class FakeFactory:
-        def create(self, width=20, height=15, seed=None):
-            return fake_game
-
-    monkeypatch.setattr(ui, "GameFactory", FakeFactory)
-    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
-    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
-    monkeypatch.setattr(ui.pygame.event, "get", fake_events)
-    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
-    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(ui, "_load_fonts", lambda: (None, None))
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
 
     ui._main()
 
     assert fake_game.step_calls == 1
 
 
-def test_main_paused_flips_display(monkeypatch):
-    fake_game = FakeGame()
+def test_main_paused_flips_display(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
     surface = FakeSurface()
     flips = {"count": 0}
 
@@ -165,22 +121,10 @@ def test_main_paused_flips_display(monkeypatch):
     def fake_flip():
         flips["count"] += 1
 
-    class FakeClock:
-        def tick(self, _fps):
-            return 1000
-
-    class FakeFactory:
-        def create(self, width=20, height=15, seed=None):
-            return fake_game
-
-    monkeypatch.setattr(ui, "GameFactory", FakeFactory)
-    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
-    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
     monkeypatch.setattr(ui.pygame.display, "flip", fake_flip)
-    monkeypatch.setattr(ui.pygame.event, "get", fake_events)
-    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
-    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(ui, "_load_fonts", lambda: (None, None))
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
 
     ui._main()
 
@@ -204,7 +148,7 @@ def test_render_status_and_food(monkeypatch):
     monkeypatch.setattr(ui.pygame.display, "flip", lambda: None)
     monkeypatch.setattr(ui, "_draw_text", fake_draw_text)
 
-    game = FakeGame()
+    game = FakeGame(snake=((2, 2),))
     game._state = GameState(
         **{**game.state.__dict__, "food": (4, 4), "score": 3, "alive": True}
     )

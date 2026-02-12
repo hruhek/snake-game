@@ -70,7 +70,7 @@ def test_self_collision_ends_game(set_state):
 def test_strategy_next_head_is_used():
     class FixedStrategy:
         def next_head(self, _state):
-            return (1, 1)
+            return 1, 1
 
     game = Game(width=5, height=5, seed=1, strategy=FixedStrategy())
     result = game.step()
@@ -188,86 +188,60 @@ def test_wraparound_strategy(set_state):
     assert game.state.head == (0, 2)
 
 
-def test_observer_events(set_state):
+def test_observer_events(set_state, event_log, observer_from_log):
     game = Game(width=5, height=5, seed=1)
-    events: list[str] = []
-
-    class Observer:
-        def on_state_change(self, state, event):
-            events.append(event)
-
-    observer = Observer()
+    observer = observer_from_log(event_log)
     game.add_observer(observer)
     game.step()
     game.reset()
     set_state(game, snake=((4, 2), (3, 2), (2, 2)), direction=RIGHT)
     game.step()
 
-    assert EVENT_STEP in events
-    assert EVENT_RESET in events
-    assert EVENT_GAME_OVER in events
+    assert EVENT_STEP in event_log
+    assert EVENT_RESET in event_log
+    assert EVENT_GAME_OVER in event_log
 
 
-def test_game_over_event_emitted_without_step_for_wall_collision(set_state):
+def test_game_over_event_emitted_without_step_for_wall_collision(
+    set_state, event_log, observer_from_log
+):
     game = Game(width=5, height=5, seed=1)
-    events: list[str] = []
-
-    class Observer:
-        def on_state_change(self, state, event):
-            events.append(event)
-
-    game.add_observer(Observer())
+    game.add_observer(observer_from_log(event_log))
     set_state(game, snake=((4, 2), (3, 2), (2, 2)), direction=RIGHT)
     result = game.step()
 
     assert result.game_over is True
-    assert events == [EVENT_GAME_OVER]
+    assert event_log == [EVENT_GAME_OVER]
 
 
-def test_game_over_event_emitted_without_step_for_self_collision(set_state):
+def test_game_over_event_emitted_without_step_for_self_collision(
+    set_state, event_log, observer_from_log
+):
     game = Game(width=6, height=6, seed=1)
-    events: list[str] = []
-
-    class Observer:
-        def on_state_change(self, state, event):
-            events.append(event)
-
-    game.add_observer(Observer())
+    game.add_observer(observer_from_log(event_log))
     set_state(game, snake=((2, 2), (2, 3), (1, 3)), direction=DOWN)
     result = game.step()
 
     assert result.game_over is True
-    assert events == [EVENT_GAME_OVER]
+    assert event_log == [EVENT_GAME_OVER]
 
 
-def test_step_event_emitted_for_normal_step():
+def test_step_event_emitted_for_normal_step(event_log, observer_from_log):
     game = Game(width=6, height=6, seed=1)
-    events: list[str] = []
-
-    class Observer:
-        def on_state_change(self, state, event):
-            events.append(event)
-
-    game.add_observer(Observer())
+    game.add_observer(observer_from_log(event_log))
     game.step()
 
-    assert events == [EVENT_STEP]
+    assert event_log == [EVENT_STEP]
 
 
-def test_observer_duplicate_add_not_notified_twice():
+def test_observer_duplicate_add_not_notified_twice(event_log, observer_from_log):
     game = Game(width=6, height=6, seed=1)
-    events: list[str] = []
-
-    class Observer:
-        def on_state_change(self, state, event):
-            events.append(event)
-
-    observer = Observer()
+    observer = observer_from_log(event_log)
     game.add_observer(observer)
     game.add_observer(observer)
     game.step()
 
-    assert events == [EVENT_STEP]
+    assert event_log == [EVENT_STEP]
 
 
 def test_factories_create_games(set_state):
