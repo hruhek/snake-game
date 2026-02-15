@@ -6,6 +6,7 @@
 - `src/snake_game/game.py`: backward-compatible re-export of core symbols for external imports.
 - `src/snake_game/cli.py`: curses UI loop and rendering.
 - `src/snake_game/pygame_ui.py`: pygame UI loop, rendering, and presentation settings.
+- `src/snake_game/textual_ui.py`: Textual app UI loop, key bindings, and rendering.
 - `src/snake_game/__main__.py`: default entrypoint for the terminal UI.
 
 ## Patterns in use
@@ -47,6 +48,7 @@ If you change or add core symbols in `src/snake_game/core.py`, update the re-exp
 
 - Terminal UI: `python -m snake_game` (or `make run`).
 - Pygame UI: `python -m snake_game.pygame_ui` (or `make run-ui`).
+- Textual UI: `python -m snake_game.textual_ui` (or `make run-textual`).
 
 ## Timing and sizing configuration
 
@@ -62,11 +64,15 @@ Pygame UI settings live in `src/snake_game/pygame_ui.py`:
 - Padding: `PADDING = 20`
 - Info panel height: `INFO_HEIGHT = 92`
 
+Textual UI settings live in `src/snake_game/textual_ui.py`:
+- Grid size: `WIDTH = 20`, `HEIGHT = 15`
+- Tick rate: `TICK_SECONDS = 0.12`
+
 ## UI behavior notes
 
-- Both UIs call `Game.set_direction(...)` and `Game.step()` on the same core logic.
-- Both UIs use `GameFactory` for construction and `GameObserver` notifications for rendering.
-- Both UIs support the same control scheme: arrows/WASD to move, `P` to pause,
+- All UIs call `Game.set_direction(...)` and `Game.step()` on the same core logic.
+- All UIs use `GameFactory` for construction and `GameObserver` notifications for rendering.
+- All UIs support the same control scheme: arrows/WASD to move, `P` to pause,
   `R` to restart, `T` to toggle wrap-around, `Q` to quit.
 - Wrap-around mode is runtime-selectable in each UI by switching between
   `GameFactory` and `WraparoundGameFactory`.

@@ -1,6 +1,6 @@
 # Snake Game (Terminal)
 
-Classic Snake in the terminal using Python's built-in `curses` and `pygame`.
+Classic Snake with curses, pygame, and Textual frontends.
 
 ## Run
 
@@ -12,6 +12,12 @@ make run
 
 ```bash
 make run-ui
+```
+
+## Run (Textual UI)
+
+```bash
+make run-textual
 ```
 
 ## Tests
@@ -41,6 +47,7 @@ make format
 ```bash
 uv run python -m snake_game
 uv run python -m snake_game.pygame_ui
+uv run python -m snake_game.textual_ui
 uv run pytest
 uv run ruff check .
 uv run ruff format .
