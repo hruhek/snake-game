@@ -46,3 +46,7 @@ dev = [
     "pytest-cov>=6.0.0",
     "ruff>=0.14.14",
 ]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
