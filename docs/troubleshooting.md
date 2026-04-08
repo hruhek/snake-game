@@ -2,19 +2,10 @@
 
 ## Common issues
 
-- If the terminal UI does not respond to arrow keys, try using WASD or ensure the terminal supports curses input.
 - If the pygame window does not appear, confirm pygame is installed and your environment allows GUI windows.
 - If the Textual UI does not launch, confirm `textual` is installed and run in a terminal that supports interactive TUI updates.
 
 ## Configuration and settings
-
-### Terminal UI (curses)
-
-Source: `src/snake_game/cli.py`
-
-- Grid size: `Game(width=20, height=15)`
-- Tick rate: `tick_seconds = 0.12`
-- Wrap-around: toggled at runtime with `T` (default: OFF)
 
 ### Pygame UI
 

@@ -176,10 +176,6 @@ def test_package_exports():
     assert module.StepResult is not None
 
 
-def test_main_module_import():
-    importlib.import_module("snake_game.__main__")
-
-
 def test_wraparound_strategy(set_state):
     game = Game(width=5, height=5, seed=1, strategy=WraparoundMovementStrategy())
     set_state(game, snake=((4, 2), (3, 2), (2, 2)), direction=RIGHT, food=(0, 0))
