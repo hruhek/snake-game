@@ -187,7 +187,7 @@ def _render_board(game: GameProtocol) -> Text:
         lines.append("[#16181c]" + line + "[/]")
     lines.append("[#56606a]+" + ("-" * state.width) + "+[/]")
 
-    return Text("\n".join(lines))
+    return Text.from_markup("\n".join(lines))
 
 
 def _render_status(game: GameProtocol, paused: bool, wraparound_enabled: bool) -> Text:
