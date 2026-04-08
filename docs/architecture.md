@@ -4,10 +4,7 @@
 
 - `src/snake_game/core.py`: source of truth for game rules, state, and step logic.
 - `src/snake_game/game.py`: backward-compatible re-export of core symbols for external imports.
-- `src/snake_game/cli.py`: curses UI loop and rendering.
-- `src/snake_game/pygame_ui.py`: pygame UI loop, rendering, and presentation settings.
 - `src/snake_game/textual_ui.py`: Textual app UI loop, key bindings, and rendering.
-- `src/snake_game/__main__.py`: default entrypoint for the terminal UI.
 
 ## Patterns in use
 
@@ -46,15 +43,14 @@ If you change or add core symbols in `src/snake_game/core.py`, update the re-exp
 
 ## Entrypoints
 
-- Terminal UI: `python -m snake_game` (or `make run`).
+- Textual UI: `python -m snake_game.textual_ui` (or `make run`).
 - Pygame UI: `python -m snake_game.pygame_ui` (or `make run-ui`).
-- Textual UI: `python -m snake_game.textual_ui` (or `make run-textual`).
 
 ## Timing and sizing configuration
 
-Terminal UI settings live in `src/snake_game/cli.py`:
-- Grid size: `Game(width=20, height=15)`
-- Tick rate: `tick_seconds = 0.12`
+Textual UI settings live in `src/snake_game/textual_ui.py`:
+- Grid size: `WIDTH = 20`, `HEIGHT = 15`
+- Tick rate: `TICK_SECONDS = 0.12`
 
 Pygame UI settings live in `src/snake_game/pygame_ui.py`:
 - Grid size: `Game(width=20, height=15)`

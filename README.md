@@ -1,6 +1,6 @@
 # Snake Game (Terminal)
 
-Classic Snake with curses, pygame, and Textual frontends.
+Classic Snake with pygame and Textual frontends.
 
 ## Run
 
