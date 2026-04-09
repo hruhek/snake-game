@@ -15,7 +15,7 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 | Orange        | `#e6a86c`  | 230,168,108 | Score, paused status         |
 | Coral/Food    | `#e67860`  | 230,120,96  | Food item                    |
 | Red/Game Over | `#e5584a`  | 229,88,74   | Game over status             |
-| Border Gray   | `#56606a`  | 86,96,106   | Board border                 |
+
 | Dark BG       | `#16181c`  | 22,24,28    | Board background             |
 | Muted Gray    | `#8a8f9a`  | 138,143,154 | Wrap toggle indicator        |
 
@@ -26,12 +26,12 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 │                    SNAKE (Header)                    │
 ├──────────────────────────────────────────────────────┤
 │                                                      │
-│                   ┌──────────────────┐              │
-│                   │     +--------+   │              │
-│                   │     |  @ oo   |   │  <- Board   │
-│                   │     |    *    |   │              │
-│                   │     +--------+   │              │
-│                   └──────────────────┘              │
+│                      @ oo                            │
+│                       *                              │
+│                                                      │
+│                                                      │
+│                                                      │
+│                                                      │
 │                                                      │
 │            Score: 0  RUNNING  Wrap: OFF              │
 │                                                      │
@@ -54,9 +54,9 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 #### Board
 - **Widget:** `Static`
 - **ID:** `board`
-- **Border:** Solid gray (`#56606a`)
+- **Alignment:** Center
 - **Background:** Dark (`#16181c`)
-- **Content:** ASCII grid with colored snake and food using Rich markup
+- **Content:** ASCII grid with colored snake and food using Rich markup (no border)
 
 #### Status
 - **Widget:** `Static`
@@ -70,6 +70,7 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 #### Controls
 - **Widget:** `Static`
 - **ID:** `controls`
+- **Alignment:** Center
 - **Content:** Key binding reference
 
 ## Rendering
@@ -81,7 +82,6 @@ The board uses Rich `Text` with inline color markup:
 - Snake head: `@` in green (`#6ac470`)
 - Snake body: `o` in darker green (`#46a05c`)
 - Food: `*` in coral (`#e67860`)
-- Border: `+` and `-` in gray (`#56606a`)
 - Background: ` ` in dark (`#16181c`)
 
 ### Status Rendering (`_render_status`)

@@ -19,7 +19,7 @@ from snake_game.core import (
 )
 
 WIDTH = 20
-HEIGHT = 15
+HEIGHT = 20
 TICK_SECONDS = 0.12
 
 
@@ -35,6 +35,7 @@ class _TextualObserver(GameObserver):
 class SnakeTextualApp(App[None]):
     CSS = """
     Screen {
+        layout: vertical;
         align: center middle;
         background: $surface;
     }
@@ -47,9 +48,9 @@ class SnakeTextualApp(App[None]):
     }
 
     #board {
-        width: auto;
+        width: 100%;
         height: auto;
-        border: solid #56606a;
+        text-align: center;
         background: #16181c;
     }
 
@@ -77,6 +78,11 @@ class SnakeTextualApp(App[None]):
 
     #status .wrap {
         color: #8a8f9a;
+    }
+
+    #controls {
+        width: 100%;
+        text-align: center;
     }
 
     Footer {
@@ -170,22 +176,25 @@ def _create_game(wraparound_enabled: bool, width: int, height: int) -> GameProto
 def _render_board(game: GameProtocol) -> Text:
     state = game.state
     cells: list[list[str]] = [
-        [" " for _ in range(state.width)] for _ in range(state.height)
+        ["  " for _ in range(state.width)] for _ in range(state.height)
     ]
 
     for index, (x, y) in enumerate(state.snake):
         if 0 <= y < state.height and 0 <= x < state.width:
-            cells[y][x] = "[#6ac470]@[/]" if index == 0 else "[#46a05c]o[/]"
+            cells[y][x] = "[#6ac470]@@[/]" if index == 0 else "[#46a05c]oo[/]"
 
     food_x, food_y = state.food
     if state.alive and 0 <= food_y < state.height and 0 <= food_x < state.width:
-        cells[food_y][food_x] = "[#e67860]*[/]"
+        cells[food_y][food_x] = "[#e67860]**[/]"
 
-    lines = ["[#56606a]+" + ("-" * state.width) + "+[/]"]
+    border_color = "[#46a05c]"
+    border_width = state.width * 2
+    lines = []
+    lines.append(f"{border_color}┌{'─' * border_width}┐[/]")
     for row in cells:
-        line = "|" + "".join(row) + "|"
-        lines.append("[#16181c]" + line + "[/]")
-    lines.append("[#56606a]+" + ("-" * state.width) + "+[/]")
+        line = "".join(row)
+        lines.append(f"{border_color}│[/]{line}{border_color}│[/]")
+    lines.append(f"{border_color}└{'─' * border_width}┘[/]")
 
     return Text.from_markup("\n".join(lines))
 

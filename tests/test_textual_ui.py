@@ -158,11 +158,24 @@ async def test_refresh_view_updates_board_and_status(fake_game_factory):
 
 @pytest.mark.asyncio
 async def test_render_board_returns_text():
-    game = ui._create_game(False, 20, 15)
+    game = ui._create_game(False, ui.WIDTH, ui.HEIGHT)
     result = ui._render_board(game)
 
     assert result is not None
-    assert "+" in result.plain
+    lines = result.plain.split("\n")
+    assert len(lines) == ui.HEIGHT + 2
+
+
+@pytest.mark.asyncio
+async def test_render_board_has_correct_dimensions():
+    game = ui._create_game(False, ui.WIDTH, ui.HEIGHT)
+    result = ui._render_board(game)
+
+    lines = result.plain.split("\n")
+    assert len(lines) == ui.HEIGHT + 2
+
+    for line in lines:
+        assert len(line) == ui.WIDTH * 2 + 2
 
 
 @pytest.mark.asyncio
