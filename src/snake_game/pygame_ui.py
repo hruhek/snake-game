@@ -84,7 +84,7 @@ class _PygameObserver(GameObserver):
 
 def _main() -> None:
     width = 20
-    height = 15
+    height = 20
     wraparound_enabled = False
     game = _create_game(wraparound_enabled, width, height)
     paused = False

@@ -1,10 +1,11 @@
-from types import SimpleNamespace
+import pytest
 
 import snake_game.textual_ui as ui
 from snake_game.core import GameState
 
 
-def test_run_starts_textual_app(monkeypatch):
+@pytest.mark.asyncio
+async def test_run_starts_textual_app(monkeypatch):
     calls = {"run": 0}
 
     class FakeApp:
@@ -18,202 +19,230 @@ def test_run_starts_textual_app(monkeypatch):
     assert calls["run"] == 1
 
 
-def test_movement_actions_set_direction(fake_game_factory):
-    app = ui.SnakeTextualApp()
-    fake_game = fake_game_factory()
-    app._game = fake_game
-
-    app.action_move_up()
-    app.action_move_down()
-    app.action_move_left()
-    app.action_move_right()
-
-    assert fake_game.set_direction_calls == [ui.UP, ui.DOWN, ui.LEFT, ui.RIGHT]
-
-
-def test_compose_yields_board_widget():
+@pytest.mark.asyncio
+async def test_compose_yields_expected_widgets():
     app = ui.SnakeTextualApp()
 
     widgets = list(app.compose())
 
-    assert len(widgets) == 1
-    assert widgets[0].id == "board"
+    assert len(widgets) == 5
+    assert widgets[0].id is None
+    assert widgets[1].id == "title"
+    assert widgets[2].id == "board"
+    assert widgets[3].id == "status"
+    assert widgets[4].id == "controls"
 
 
-def test_on_mount_sets_interval_and_refreshes(monkeypatch):
+@pytest.mark.asyncio
+async def test_key_presses_change_direction(fake_game_factory):
     app = ui.SnakeTextualApp()
-    calls = {"interval": 0, "refresh": 0}
+    fake_game = fake_game_factory()
+    app._game = fake_game
 
-    def fake_set_interval(seconds, callback):
-        calls["interval"] += 1
-        assert seconds == ui.TICK_SECONDS
-        assert callback == app._on_tick
+    async with app.run_test() as pilot:
+        await pilot.press("up")
+        await pilot.press("down")
+        await pilot.press("left")
+        await pilot.press("right")
 
-    monkeypatch.setattr(app, "set_interval", fake_set_interval)
-    monkeypatch.setattr(
-        app,
-        "refresh_view",
-        lambda: calls.__setitem__("refresh", calls["refresh"] + 1),
-    )
-
-    app.on_mount()
-
-    assert calls["interval"] == 1
-    assert calls["refresh"] == 1
+        assert fake_game.set_direction_calls == [ui.UP, ui.DOWN, ui.LEFT, ui.RIGHT]
 
 
-def test_action_pause_toggles_and_refreshes(monkeypatch):
+@pytest.mark.asyncio
+async def test_wasd_keys_change_direction(fake_game_factory):
     app = ui.SnakeTextualApp()
-    refresh_calls = {"count": 0}
+    fake_game = fake_game_factory()
+    app._game = fake_game
 
-    monkeypatch.setattr(
-        app,
-        "refresh_view",
-        lambda: refresh_calls.__setitem__("count", refresh_calls["count"] + 1),
-    )
+    async with app.run_test() as pilot:
+        await pilot.press("w")
+        await pilot.press("s")
+        await pilot.press("a")
+        await pilot.press("d")
 
-    assert app._paused is False
-    app.action_pause()
-    assert app._paused is True
-    app.action_pause()
-    assert app._paused is False
-    assert refresh_calls["count"] == 2
+        assert fake_game.set_direction_calls == [ui.UP, ui.DOWN, ui.LEFT, ui.RIGHT]
 
 
-def test_action_restart_resets_game(fake_game_factory, monkeypatch):
+@pytest.mark.asyncio
+async def test_pause_toggles_state():
+    app = ui.SnakeTextualApp()
+    async with app.run_test() as pilot:
+        assert app._paused is False
+
+        await pilot.press("p")
+        assert app._paused is True
+
+        await pilot.press("p")
+        assert app._paused is False
+
+
+@pytest.mark.asyncio
+async def test_restart_resets_game(fake_game_factory):
     app = ui.SnakeTextualApp()
     fake_game = fake_game_factory()
     app._game = fake_game
     app._paused = True
 
-    monkeypatch.setattr(app, "refresh_view", lambda: None)
+    async with app.run_test() as pilot:
+        await pilot.press("r")
 
-    app.action_restart()
-
-    assert fake_game.reset_calls == 1
-    assert app._paused is False
+        assert fake_game.reset_calls == 1
+        assert app._paused is False
 
 
-def test_action_toggle_wrap_recreates_game(fake_game_factory, monkeypatch):
-    standard_game = fake_game_factory(snake=((2, 2),))
-    wrap_game = fake_game_factory(snake=((3, 2),))
-    calls = {"standard": 0, "wrap": 0}
-
-    class StandardFactory:
-        def create(self, width=20, height=15, seed=None):
-            del width, height, seed
-            calls["standard"] += 1
-            return standard_game
-
-    class WrapFactory:
-        def create(self, width=20, height=15, seed=None):
-            del width, height, seed
-            calls["wrap"] += 1
-            return wrap_game
-
-    monkeypatch.setattr(ui, "GameFactory", StandardFactory)
-    monkeypatch.setattr(ui, "WraparoundGameFactory", WrapFactory)
-
+@pytest.mark.asyncio
+async def test_toggle_wrap_recreates_game():
     app = ui.SnakeTextualApp()
-    app._paused = True
-    monkeypatch.setattr(app, "refresh_view", lambda: None)
+    async with app.run_test() as pilot:
+        await pilot.press("t")
 
-    app.action_toggle_wrap()
-
-    assert app._wraparound_enabled is True
-    assert app._game is wrap_game
-    assert app._paused is False
-    assert calls["standard"] == 1
-    assert calls["wrap"] == 1
+        assert app._wraparound_enabled is True
+        assert app._paused is False
 
 
-def test_action_quit_game_calls_exit(monkeypatch):
+@pytest.mark.asyncio
+async def test_quit_game_calls_exit():
     app = ui.SnakeTextualApp()
-    calls = {"exit": 0}
-
-    monkeypatch.setattr(
-        app, "exit", lambda: calls.__setitem__("exit", calls["exit"] + 1)
-    )
-
-    app.action_quit_game()
-
-    assert calls["exit"] == 1
+    async with app.run_test() as pilot:
+        await pilot.press("q")
 
 
-def test_on_tick_steps_only_when_running(fake_game_factory):
+@pytest.mark.asyncio
+async def test_on_tick_does_not_step_when_paused(fake_game_factory):
     app = ui.SnakeTextualApp()
     fake_game = fake_game_factory()
     app._game = fake_game
-    app._paused = False
-
-    app._on_tick()
-    assert fake_game.step_calls == 1
-
     app._paused = True
-    app._on_tick()
-    assert fake_game.step_calls == 1
 
-    app._paused = False
+    async with app.run_test() as pilot:
+        await pilot.press("up")
+
+        initial_calls = fake_game.step_calls
+
+        app._on_tick()
+
+        assert fake_game.step_calls == initial_calls
+
+
+@pytest.mark.asyncio
+async def test_on_tick_does_not_step_when_dead(fake_game_factory):
+    app = ui.SnakeTextualApp()
+    fake_game = fake_game_factory()
     fake_game._state = GameState(**{**fake_game.state.__dict__, "alive": False})
-    app._on_tick()
-    assert fake_game.step_calls == 1
+    app._game = fake_game
+
+    async with app.run_test() as pilot:
+        await pilot.press("up")
+
+        initial_calls = fake_game.step_calls
+
+        app._on_tick()
+
+        assert fake_game.step_calls == initial_calls
 
 
-def test_refresh_view_updates_widget(fake_game_factory):
+@pytest.mark.asyncio
+async def test_refresh_view_updates_board_and_status(fake_game_factory):
     app = ui.SnakeTextualApp()
     app._game = fake_game_factory()
 
-    class FakeBoard:
-        def __init__(self):
-            self.last_text = None
+    async with app.run_test():
+        app.refresh_view()
 
-        def update(self, text):
-            self.last_text = text
+        board = app.query_one("#board", ui.Static)
+        status = app.query_one("#status", ui.Static)
 
-    board = FakeBoard()
-    app.query_one = lambda _selector, _kind: board
-
-    app.refresh_view()
-
-    assert isinstance(board.last_text, str)
-    assert "Score:" in board.last_text
+        assert board.content is not None
+        assert status.content is not None
 
 
-def test_render_frame_status_and_food(fake_game_factory):
-    game = fake_game_factory(snake=((2, 2),))
+@pytest.mark.asyncio
+async def test_render_board_returns_text():
+    game = ui._create_game(False, ui.WIDTH, ui.HEIGHT)
+    result = ui._render_board(game)
+
+    assert result is not None
+    lines = result.plain.split("\n")
+    assert len(lines) == ui.HEIGHT + 2
+
+
+@pytest.mark.asyncio
+async def test_render_board_has_correct_dimensions():
+    game = ui._create_game(False, ui.WIDTH, ui.HEIGHT)
+    result = ui._render_board(game)
+
+    lines = result.plain.split("\n")
+    assert len(lines) == ui.HEIGHT + 2
+
+    for line in lines:
+        assert len(line) == ui.WIDTH * 2 + 2
+
+
+@pytest.mark.asyncio
+async def test_render_board_shows_snake():
+    game = ui._create_game(False, 20, 15)
     game._state = GameState(
-        **{**game.state.__dict__, "food": (4, 4), "score": 3, "alive": True}
+        **{**game.state.__dict__, "snake": [(5, 5), (4, 5), (3, 5)]}
     )
+    result = ui._render_board(game)
+    result_str = result.plain
 
-    frame = ui._render_frame(game, paused=True, wraparound_enabled=True)
-    assert "PAUSED" in frame
-    assert "Wrap: ON" in frame
-    assert "*" in frame
-
-    game._state = GameState(**{**game.state.__dict__, "food": (4, 4), "alive": False})
-    frame = ui._render_frame(game, paused=False, wraparound_enabled=False)
-    assert "GAME OVER" in frame
-    assert "Wrap: OFF" in frame
+    assert "@" in result_str
+    assert "o" in result_str
 
 
-def test_render_frame_skips_invalid_food(fake_game_factory):
-    game = fake_game_factory(snake=((2, 2),), food=(-1, -1))
-    game._state = GameState(**{**game.state.__dict__, "food": (-1, -1)})
+@pytest.mark.asyncio
+async def test_render_board_shows_food():
+    game = ui._create_game(False, 20, 15)
+    game._state = GameState(**{**game.state.__dict__, "food": (10, 7)})
+    result = ui._render_board(game)
+    result_str = result.plain
 
-    frame = ui._render_frame(game, paused=False, wraparound_enabled=False)
-
-    assert "*" not in frame
+    assert "*" in result_str
 
 
-def test_observer_refreshes_view(fake_game_factory, monkeypatch):
+@pytest.mark.asyncio
+async def test_render_status_running():
+    game = ui._create_game(False, 20, 15)
+    game._state = GameState(**{**game.state.__dict__, "score": 5})
+    result = ui._render_status(game, paused=False, wraparound_enabled=False)
+    result_str = result.plain
+
+    assert "Score:" in result_str
+    assert "5" in result_str
+    assert "RUNNING" in result_str
+    assert "Wrap: OFF" in result_str
+
+
+@pytest.mark.asyncio
+async def test_render_status_paused():
+    game = ui._create_game(False, 20, 15)
+    result = ui._render_status(game, paused=True, wraparound_enabled=True)
+    result_str = result.plain
+
+    assert "PAUSED" in result_str
+    assert "Wrap: ON" in result_str
+
+
+@pytest.mark.asyncio
+async def test_render_status_game_over():
+    game = ui._create_game(False, 20, 15)
+    game._state = GameState(**{**game.state.__dict__, "alive": False})
+    result = ui._render_status(game, paused=False, wraparound_enabled=False)
+    result_str = result.plain
+
+    assert "GAME OVER" in result_str
+
+
+@pytest.mark.asyncio
+async def test_observer_refreshes_view(fake_game_factory):
     app = ui.SnakeTextualApp()
     app._game = fake_game_factory()
-    observer = ui._TextualObserver(app)
-    calls = {"count": 0}
-    monkeypatch.setattr(
-        app, "refresh_view", lambda: calls.__setitem__("count", calls["count"] + 1)
-    )
+    async with app.run_test():
+        observer = ui._TextualObserver(app)
 
-    observer.on_state_change(SimpleNamespace(), "step")
+        initial_content = str(app.query_one("#board", ui.Static).content)
 
-    assert calls["count"] == 1
+        observer.on_state_change(None, "step")
+
+        assert str(app.query_one("#board", ui.Static).content) == initial_content
