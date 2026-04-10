@@ -25,17 +25,20 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 ┌──────────────────────────────────────────────────────┐
 │                    SNAKE (Header)                    │
 ├──────────────────────────────────────────────────────┤
-│                                                      │
-│                      @ oo                            │
-│                       *                              │
-│                                                      │
-│                                                      │
-│                                                      │
-│                                                      │
-│                                                      │
+│                      SNAKE                          │
+│  ┌──────────────────────────────────────────────┐   │
+│  │                                              │   │
+│  │                      @@ oo                   │   │
+│  │                       **                     │   │
+│  │                                              │   │
+│  │                                              │   │
+│  │                                              │   │
+│  │                                              │   │
+│  │                                              │   │
+│  │                                              │   │
+│  └──────────────────────────────────────────────┘   │
 │            Score: 0  RUNNING  Wrap: OFF              │
-│                                                      │
-│   arrows/WASD: move  |  P: pause  |  R: restart...  │
+│  arrows/WASD: move | P: pause | R: restart | T:...  │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -56,7 +59,7 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 - **ID:** `board`
 - **Alignment:** Center
 - **Background:** Dark (`#16181c`)
-- **Content:** ASCII grid with colored snake and food using Rich markup (no border)
+- **Content:** ASCII grid with colored snake and food using Rich markup, surrounded by a green (`#46a05c`) box border (`┌─┐│└┘`)
 
 #### Status
 - **Widget:** `Static`
@@ -71,7 +74,21 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 - **Widget:** `Static`
 - **ID:** `controls`
 - **Alignment:** Center
-- **Content:** Key binding reference
+- **Content:** `arrows/WASD: move | P: pause | R: restart | T: wrap | Q: quit`
+
+## CSS Classes
+
+The following CSS classes are defined for status rendering (though Rich inline markup is used in practice):
+
+| Selector | Color | Purpose |
+|----------|-------|---------|
+| `#status .score` | `#e6a86c` | Score value |
+| `#status .state` | `#6ac470` | RUNNING state |
+| `#status .state.paused` | `#e6a86c` | PAUSED state |
+| `#status .state.gameover` | `#e5584a` | GAME OVER state |
+| `#status .wrap` | `#8a8f9a` | Wrap toggle indicator |
+
+A `Footer` rule sets `width: 100%`.
 
 ## Rendering
 
@@ -79,10 +96,12 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 
 The board uses Rich `Text` with inline color markup:
 
-- Snake head: `@` in green (`#6ac470`)
-- Snake body: `o` in darker green (`#46a05c`)
-- Food: `*` in coral (`#e67860`)
-- Background: ` ` in dark (`#16181c`)
+- Snake head: `@@` in green (`#6ac470`)
+- Snake body: `oo` in darker green (`#46a05c`)
+- Food: `**` in coral (`#e67860`)
+- Background: `  ` (two spaces) in dark (`#16181c`)
+- Border: Box-drawing characters (`┌─┐│└┘`) in green (`#46a05c`)
+- Board width: `width * 2` characters (each cell is 2 chars wide)
 
 ### Status Rendering (`_render_status`)
 
@@ -107,12 +126,12 @@ Returns a Rich `Text` composed of:
 ## Game Constants
 
 - **Width:** 20 cells
-- **Height:** 15 cells
+- **Height:** 20 cells
 - **Tick Rate:** 0.12 seconds
 
 ## Implementation Notes
 
 - Uses `textual.widgets.Header` for built-in header with key hints
-- Uses `rich.text.Text` for colored terminal output
+- Uses `rich.text.Text` for colored terminal output (inline Rich markup, not CSS classes)
 - Board and status are separate widgets updated independently
 - Game observer pattern triggers `refresh_view()` on state changes
