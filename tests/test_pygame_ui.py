@@ -80,7 +80,7 @@ def test_main_handles_key_events(monkeypatch, fake_game_factory, factory_for_gam
             SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_UP),
             SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_p),
             SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_r),
-            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+            SimpleNamespace(type=ui.pygame.QUIT),
         ]
 
     patch_main_dependencies(

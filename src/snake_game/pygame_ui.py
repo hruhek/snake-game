@@ -202,8 +202,6 @@ def _main() -> None:
                 elif current_state == PLAYING:
                     if event.key in KEY_MAP:
                         game.set_direction(KEY_MAP[event.key])
-                    elif event.key == pygame.K_q:
-                        running = False
                     elif event.key == pygame.K_p:
                         paused = not paused
                         _render_game(
