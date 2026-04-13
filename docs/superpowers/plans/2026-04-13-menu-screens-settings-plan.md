@@ -344,9 +344,9 @@ class MenuScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-start":
-            self.app.push_screen(GameScreen())
+            self.app.push_screen(GameScreen(self.app._settings_store))
         elif event.button.id == "btn-options":
-            self.app.push_screen(OptionsScreen())
+            self.app.push_screen(OptionsScreen(self.app._settings_store))
         elif event.button.id == "btn-quit":
             self.app.exit()
 
