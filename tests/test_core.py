@@ -262,3 +262,17 @@ def test_add_observer_ignores_duplicates():
     observer = Observer()
     game.add_observer(observer)
     game.add_observer(observer)
+
+
+def test_game_factory_accepts_tick_interval():
+    from snake_game.core import GameFactory
+
+    game = GameFactory().create(tick_interval=0.20)
+    assert game._tick_interval == 0.20
+
+
+def test_wraparound_game_factory_accepts_tick_interval():
+    from snake_game.core import WraparoundGameFactory
+
+    game = WraparoundGameFactory().create(tick_interval=0.06)
+    assert game._tick_interval == 0.06

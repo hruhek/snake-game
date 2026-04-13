@@ -83,12 +83,14 @@ class Game(GameProtocol):
         height: int = 15,
         seed: int | None = None,
         strategy: MovementStrategy | None = None,
+        tick_interval: float = 0.12,
     ) -> None:
         if width < 5 or height < 5:
             raise ValueError("Grid too small for Snake")
         self._strategy = strategy or StandardMovementStrategy()
         self._observers: list[GameObserver] = []
         self._rng = Random(seed)
+        self._tick_interval = tick_interval
         self._init_state(width, height)
 
     _state: GameState
@@ -200,8 +202,9 @@ class GameFactory:
         width: int = 20,
         height: int = 15,
         seed: int | None = None,
+        tick_interval: float = 0.12,
     ) -> Game:
-        return Game(width=width, height=height, seed=seed)
+        return Game(width=width, height=height, seed=seed, tick_interval=tick_interval)
 
 
 class WraparoundGameFactory(GameFactory):
@@ -210,10 +213,12 @@ class WraparoundGameFactory(GameFactory):
         width: int = 20,
         height: int = 15,
         seed: int | None = None,
+        tick_interval: float = 0.12,
     ) -> Game:
         return Game(
             width=width,
             height=height,
             seed=seed,
             strategy=WraparoundMovementStrategy(),
+            tick_interval=tick_interval,
         )
