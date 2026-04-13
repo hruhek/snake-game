@@ -19,6 +19,7 @@ from snake_game.core import (
     WraparoundGameFactory,
     WraparoundMovementStrategy,
 )
+from snake_game.settings import SPEED_PRESETS, Settings
 
 __all__ = [
     "DOWN",
@@ -27,6 +28,7 @@ __all__ = [
     "EVENT_STEP",
     "LEFT",
     "RIGHT",
+    "SPEED_PRESETS",
     "UP",
     "Game",
     "GameFactory",
@@ -34,6 +36,7 @@ __all__ = [
     "GameProtocol",
     "GameState",
     "MovementStrategy",
+    "Settings",
     "StandardMovementStrategy",
     "StepResult",
     "WraparoundGameFactory",

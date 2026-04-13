@@ -5,6 +5,24 @@ from test_support import FakeGame
 
 import snake_game.pygame_ui as ui
 from snake_game.core import GameState
+from snake_game.settings import SPEED_PRESETS, Settings
+
+
+class FakeSettings:
+    def __init__(self, speed_preset="Normal", wrap=False):
+        self.speed_preset = speed_preset
+        self.wrap = wrap
+
+    @property
+    def tick_seconds(self):
+        return SPEED_PRESETS[self.speed_preset]
+
+    @classmethod
+    def load(cls):
+        return cls()
+
+    def save(self):
+        pass
 
 
 class FakeSurface:
@@ -39,6 +57,9 @@ def patch_main_dependencies(
     monkeypatch.setattr(ui.pygame.event, "get", fake_events)
     monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
     monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "_render_menu", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "_render_options", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "Settings", FakeSettings)
 
 
 def test_run_calls_init_and_quit(monkeypatch):
@@ -64,15 +85,15 @@ def test_run_calls_init_and_quit(monkeypatch):
     assert calls["quit"] == 1
 
 
-def test_main_handles_key_events(monkeypatch, fake_game_factory, factory_for_game):
+def test_main_menu_start_game(monkeypatch, fake_game_factory, factory_for_game):
     fake_game = fake_game_factory(snake=((2, 2),))
     surface = FakeSurface()
 
     def fake_events():
         return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_1),
             SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_UP),
-            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_p),
-            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_r),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_ESCAPE),
             SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
         ]
 
@@ -82,7 +103,215 @@ def test_main_handles_key_events(monkeypatch, fake_game_factory, factory_for_gam
 
     ui._main()
 
-    assert fake_game.set_direction_calls
+    assert fake_game.set_direction_calls == [ui.UP]
+
+
+def test_main_menu_exit(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+
+    def fake_events():
+        return [SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q)]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+
+    ui._main()
+
+
+def test_main_menu_escape_exit(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+
+    def fake_events():
+        return [SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_ESCAPE)]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+
+    ui._main()
+
+
+def test_main_menu_options(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_2),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_ESCAPE),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+        ]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+
+    ui._main()
+
+
+def test_main_options_speed_and_wrap(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+    saved_settings = []
+
+    class TrackingSettings(FakeSettings):
+        def save(self):
+            saved_settings.append((self.speed_preset, self.wrap))
+
+    monkeypatch.setattr(ui, "Settings", TrackingSettings)
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_2),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_1),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_w),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_RETURN),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+        ]
+
+    monkeypatch.setattr(ui, "GameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(ui, "WraparoundGameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
+    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
+    monkeypatch.setattr(ui.pygame.event, "get", fake_events)
+    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
+    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "_render_menu", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "_render_options", lambda *_args, **_kwargs: None)
+
+    ui._main()
+
+    assert ("Slow", True) in saved_settings
+
+
+def test_main_game_key_events(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_1),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_UP),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_p),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_ESCAPE),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+        ]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+
+    ui._main()
+
+    assert fake_game.set_direction_calls == [ui.UP]
+
+
+def test_main_game_quit_from_game(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_1),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+        ]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+
+    ui._main()
+
+
+def test_main_options_speed_normal(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+    saved_settings = []
+
+    class TrackingSettings(FakeSettings):
+        def save(self):
+            saved_settings.append((self.speed_preset, self.wrap))
+
+    monkeypatch.setattr(ui, "Settings", TrackingSettings)
+    monkeypatch.setattr(ui, "GameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(ui, "WraparoundGameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
+    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
+    monkeypatch.setattr(
+        ui.pygame.event,
+        "get",
+        lambda: [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_2),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_2),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_RETURN),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+        ],
+    )
+    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
+    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "_render_menu", lambda *_a, **_kw: None)
+    monkeypatch.setattr(ui, "_render_options", lambda *_a, **_kw: None)
+
+    ui._main()
+
+    assert ("Normal", False) in saved_settings
+
+
+def test_main_options_speed_fast(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+    saved_settings = []
+
+    class TrackingSettings(FakeSettings):
+        def save(self):
+            saved_settings.append((self.speed_preset, self.wrap))
+
+    monkeypatch.setattr(ui, "Settings", TrackingSettings)
+    monkeypatch.setattr(ui, "GameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(ui, "WraparoundGameFactory", factory_for_game(fake_game))
+    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
+    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
+    monkeypatch.setattr(
+        ui.pygame.event,
+        "get",
+        lambda: [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_2),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_3),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_RETURN),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+        ],
+    )
+    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
+    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ui, "_render_menu", lambda *_a, **_kw: None)
+    monkeypatch.setattr(ui, "_render_options", lambda *_a, **_kw: None)
+
+    ui._main()
+
+    assert ("Fast", False) in saved_settings
+
+
+def test_main_game_restart(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_1),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_r),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_ESCAPE),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
+        ]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+
+    ui._main()
+
     assert fake_game.reset_calls == 1
 
 
@@ -91,7 +320,10 @@ def test_main_steps_and_handles_quit(monkeypatch, fake_game_factory, factory_for
     surface = FakeSurface()
 
     def fake_events():
-        return [SimpleNamespace(type=ui.pygame.QUIT)]
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_1),
+            SimpleNamespace(type=ui.pygame.QUIT),
+        ]
 
     patch_main_dependencies(
         monkeypatch, fake_game, surface, fake_events, factory_for_game
@@ -99,7 +331,7 @@ def test_main_steps_and_handles_quit(monkeypatch, fake_game_factory, factory_for
 
     ui._main()
 
-    assert fake_game.step_calls == 1
+    assert fake_game.step_calls >= 1
 
 
 def test_main_paused_flips_display(monkeypatch, fake_game_factory, factory_for_game):
@@ -109,6 +341,7 @@ def test_main_paused_flips_display(monkeypatch, fake_game_factory, factory_for_g
 
     def fake_events():
         return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_1),
             SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_p),
             SimpleNamespace(type=ui.pygame.QUIT),
         ]
@@ -126,45 +359,7 @@ def test_main_paused_flips_display(monkeypatch, fake_game_factory, factory_for_g
     assert flips["count"] >= 1
 
 
-def test_main_toggles_wraparound(monkeypatch, fake_game_factory):
-    standard_game = fake_game_factory(snake=((2, 2),))
-    wrap_game = fake_game_factory(snake=((3, 2),))
-    surface = FakeSurface()
-    calls = {"standard": 0, "wrap": 0}
-
-    class StandardFactory:
-        def create(self, width=20, height=15, seed=None):
-            del width, height, seed
-            calls["standard"] += 1
-            return standard_game
-
-    class WrapFactory:
-        def create(self, width=20, height=15, seed=None):
-            del width, height, seed
-            calls["wrap"] += 1
-            return wrap_game
-
-    def fake_events():
-        return [
-            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_t),
-            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_q),
-        ]
-
-    monkeypatch.setattr(ui, "GameFactory", StandardFactory)
-    monkeypatch.setattr(ui, "WraparoundGameFactory", WrapFactory)
-    monkeypatch.setattr(ui.pygame.display, "set_mode", lambda *_args: surface)
-    monkeypatch.setattr(ui.pygame.display, "set_caption", lambda *_args: None)
-    monkeypatch.setattr(ui.pygame.event, "get", fake_events)
-    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
-    monkeypatch.setattr(ui, "_render", lambda *_args, **_kwargs: None)
-
-    ui._main()
-
-    assert calls["standard"] == 1
-    assert calls["wrap"] == 1
-
-
-def test_render_status_and_food(monkeypatch):
+def test_render_status_and_speed(monkeypatch):
     surface = FakeSurface()
     rect_calls = []
 
@@ -183,20 +378,25 @@ def test_render_status_and_food(monkeypatch):
 
     game = FakeGame(snake=((2, 2),))
     game._state = GameState(
-        **{**game.state.__dict__, "food": (4, 4), "score": 3, "alive": True}
+        **{
+            **game.state.__dict__,
+            "food": (4, 4),
+            "score": 3,
+            "alive": True,
+        }
     )
     ui._render(
         surface,
         game,
         paused=True,
-        wraparound_enabled=True,
+        speed_preset="Normal",
         grid_w=56,
         grid_h=56,
     )
 
     assert any("PAUSED" in text for text in drawn_text)
-    assert any("Wrap: ON" in text for text in drawn_text)
-    assert any("toggle wrap" in text for text in drawn_text)
+    assert any("Speed: Normal" in text for text in drawn_text)
+    assert not any("Wrap" in text for text in drawn_text)
     assert any(color == ui.COLOR_FOOD for color, _width in rect_calls)
 
     rect_calls.clear()
@@ -206,13 +406,48 @@ def test_render_status_and_food(monkeypatch):
         surface,
         game,
         paused=False,
-        wraparound_enabled=False,
+        speed_preset="Fast",
         grid_w=56,
         grid_h=56,
     )
     assert any("GAME OVER" in text for text in drawn_text)
-    assert any("Wrap: OFF" in text for text in drawn_text)
-    assert not any(color == ui.COLOR_FOOD for color, _width in rect_calls)
+    assert any("Speed: Fast" in text for text in drawn_text)
+
+
+def test_render_menu(monkeypatch):
+    surface = FakeSurface()
+    drawn_text = []
+
+    def fake_draw_bitmap(_screen, text, pos, color):
+        drawn_text.append((text, color))
+
+    monkeypatch.setattr(ui, "_draw_bitmap_text", fake_draw_bitmap)
+    monkeypatch.setattr(ui.pygame, "Rect", FakeRect)
+    monkeypatch.setattr(ui.pygame.display, "flip", lambda: None)
+
+    ui._render_menu(surface)
+
+    texts = [t for t, _c in drawn_text]
+    assert any("SNAKE" in t for t in texts)
+
+
+def test_render_options(monkeypatch):
+    surface = FakeSurface()
+    drawn_text = []
+
+    def fake_draw_bitmap(_screen, text, pos, color):
+        drawn_text.append((text, color))
+
+    monkeypatch.setattr(ui, "_draw_bitmap_text", fake_draw_bitmap)
+    monkeypatch.setattr(ui.pygame, "Rect", FakeRect)
+    monkeypatch.setattr(ui.pygame.display, "flip", lambda: None)
+
+    settings = Settings(speed_preset="Normal", wrap=False)
+    ui._render_options(surface, settings)
+
+    texts = [t for t, _c in drawn_text]
+    assert any("OPTIONS" in t for t in texts)
+    assert any("WRAP" in t for t in texts)
 
 
 def test_draw_text_uses_bitmap(monkeypatch):

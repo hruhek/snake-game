@@ -5,6 +5,7 @@ from typing import ClassVar
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.screen import Screen
 from textual.widgets import Header, Static
 
 from snake_game.core import (
@@ -17,24 +18,157 @@ from snake_game.core import (
     GameProtocol,
     WraparoundGameFactory,
 )
+from snake_game.settings import SPEED_PRESETS, Settings
 
 WIDTH = 20
 HEIGHT = 20
-TICK_SECONDS = 0.12
 
 
 class _TextualObserver(GameObserver):
-    def __init__(self, app: SnakeTextualApp) -> None:
-        self._app = app
+    def __init__(self, screen: GameScreen) -> None:
+        self._screen = screen
 
     def on_state_change(self, state: object, event: str) -> None:
         del state, event
-        self._app.refresh_view()
+        self._screen.refresh_view()
 
 
-class SnakeTextualApp(App[None]):
+class MenuScreen(Screen[None]):
     CSS = """
-    Screen {
+    MenuScreen {
+        layout: vertical;
+        align: center middle;
+        background: $surface;
+    }
+
+    #menu-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $success;
+        margin-bottom: 2;
+    }
+
+    #menu-items {
+        width: 100%;
+        text-align: center;
+    }
+    """
+
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
+        Binding("1,enter", "start_game", "Start Game"),
+        Binding("2", "options", "Options"),
+        Binding("3,q,escape", "quit_game", "Quit"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        yield Static("SNAKE", id="menu-title")
+        yield Static(
+            "[1] Start New Game\n[2] Options\n[3] Exit",
+            id="menu-items",
+        )
+
+    def action_start_game(self) -> None:
+        self.app.push_screen("game")
+
+    def action_options(self) -> None:
+        self.app.push_screen("options")
+
+    def action_quit_game(self) -> None:
+        self.app.exit()
+
+
+class OptionsScreen(Screen[None]):
+    CSS = """
+    OptionsScreen {
+        layout: vertical;
+        align: center middle;
+        background: $surface;
+    }
+
+    #options-title {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: $success;
+        margin-bottom: 2;
+    }
+
+    #options-content {
+        width: 100%;
+        text-align: center;
+    }
+    """
+
+    BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
+        Binding("1", "speed_slow", "Speed: Slow"),
+        Binding("2", "speed_normal", "Speed: Normal"),
+        Binding("3", "speed_fast", "Speed: Fast"),
+        Binding("w", "toggle_wrap", "Toggle Wrap"),
+        Binding("escape,enter", "back", "Back"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        yield Static("OPTIONS", id="options-title")
+        yield Static("", id="options-content")
+
+    def on_mount(self) -> None:
+        self._refresh_options()
+
+    def _refresh_options(self) -> None:
+        app = self.app
+        assert isinstance(app, SnakeTextualApp)
+        settings = app.settings
+        speed = settings.speed_preset
+        wrap = "ON" if settings.wrap else "OFF"
+        speed_items = []
+        for name in SPEED_PRESETS:
+            marker = ">" if name == speed else " "
+            speed_items.append(f"{marker} {name}")
+        speed_text = "\n".join(speed_items)
+        content = (
+            f"Game Speed:\n{speed_text}\n\n"
+            f"Wrap: {wrap}  [W to toggle]\n\n"
+            "[1] Slow  [2] Normal  [3] Fast\n"
+            "[Esc/Enter] Back"
+        )
+        self.query_one("#options-content", Static).update(content)
+
+    def action_speed_slow(self) -> None:
+        app = self.app
+        assert isinstance(app, SnakeTextualApp)
+        app.settings.speed_preset = "Slow"
+        app.settings.save()
+        self._refresh_options()
+
+    def action_speed_normal(self) -> None:
+        app = self.app
+        assert isinstance(app, SnakeTextualApp)
+        app.settings.speed_preset = "Normal"
+        app.settings.save()
+        self._refresh_options()
+
+    def action_speed_fast(self) -> None:
+        app = self.app
+        assert isinstance(app, SnakeTextualApp)
+        app.settings.speed_preset = "Fast"
+        app.settings.save()
+        self._refresh_options()
+
+    def action_toggle_wrap(self) -> None:
+        app = self.app
+        assert isinstance(app, SnakeTextualApp)
+        app.settings.wrap = not app.settings.wrap
+        app.settings.save()
+        self._refresh_options()
+
+    def action_back(self) -> None:
+        self.app.pop_screen()
+
+
+class GameScreen(Screen[None]):
+    CSS = """
+    GameScreen {
         layout: vertical;
         align: center middle;
         background: $surface;
@@ -76,10 +210,6 @@ class SnakeTextualApp(App[None]):
         color: #e5584a;
     }
 
-    #status .wrap {
-        color: #8a8f9a;
-    }
-
     #controls {
         width: 100%;
         text-align: center;
@@ -97,17 +227,15 @@ class SnakeTextualApp(App[None]):
         Binding("right,d", "move_right", show=False),
         Binding("p", "pause", "Pause"),
         Binding("r", "restart", "Restart"),
-        Binding("t", "toggle_wrap", "Wrap"),
         Binding("q", "quit_game", "Quit"),
+        Binding("escape", "back_to_menu", "Menu"),
     ]
 
     def __init__(self) -> None:
         super().__init__()
         self._paused = False
-        self._wraparound_enabled = False
-        self._observer = _TextualObserver(self)
-        self._game = _create_game(self._wraparound_enabled, WIDTH, HEIGHT)
-        self._game.add_observer(self._observer)
+        self._game: GameProtocol | None = None
+        self._observer: _TextualObserver | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -115,57 +243,93 @@ class SnakeTextualApp(App[None]):
         yield Static("", id="board")
         yield Static("", id="status")
         yield Static(
-            "arrows/WASD: move | P: pause | R: restart | T: wrap | Q: quit",
+            "arrows/WASD: move | P: pause | R: restart | Esc: menu | Q: quit",
             id="controls",
         )
 
     def on_mount(self) -> None:
-        self.set_interval(TICK_SECONDS, self._on_tick)
+        app = self.app
+        assert isinstance(app, SnakeTextualApp)
+        settings = app.settings
+        self._game = _create_game(settings.wrap, WIDTH, HEIGHT)
+        self._observer = _TextualObserver(self)
+        self._game.add_observer(self._observer)
+        self._tick_callback = self.set_interval(settings.tick_seconds, self._on_tick)
         self.refresh_view()
 
     def action_move_up(self) -> None:
-        self._game.set_direction(UP)
+        if self._game:
+            self._game.set_direction(UP)
 
     def action_move_down(self) -> None:
-        self._game.set_direction(DOWN)
+        if self._game:
+            self._game.set_direction(DOWN)
 
     def action_move_left(self) -> None:
-        self._game.set_direction(LEFT)
+        if self._game:
+            self._game.set_direction(LEFT)
 
     def action_move_right(self) -> None:
-        self._game.set_direction(RIGHT)
+        if self._game:
+            self._game.set_direction(RIGHT)
 
     def action_pause(self) -> None:
         self._paused = not self._paused
         self.refresh_view()
 
     def action_restart(self) -> None:
-        self._game.reset()
-        self._paused = False
-        self.refresh_view()
-
-    def action_toggle_wrap(self) -> None:
-        self._wraparound_enabled = not self._wraparound_enabled
-        self._game = _create_game(self._wraparound_enabled, WIDTH, HEIGHT)
-        self._game.add_observer(self._observer)
+        if self._game:
+            self._game.reset()
         self._paused = False
         self.refresh_view()
 
     def action_quit_game(self) -> None:
-        self.exit()
+        self.app.exit()
+
+    def action_back_to_menu(self) -> None:
+        self.app.pop_screen()
 
     def refresh_view(self) -> None:
+        if self._game is None:
+            return
+        app = self.app
+        assert isinstance(app, SnakeTextualApp)
         board = self.query_one("#board", Static)
         status = self.query_one("#status", Static)
         board.update(_render_board(self._game))
         status.update(
-            _render_status(self._game, self._paused, self._wraparound_enabled)
+            _render_status(self._game, self._paused, app.settings.speed_preset)
         )
 
     def _on_tick(self) -> None:
+        if self._game is None:
+            return
         if self._paused or not self._game.state.alive:
             return
         self._game.step()
+
+
+class SnakeTextualApp(App[None]):
+    CSS = """
+    Screen {
+        layout: vertical;
+        align: center middle;
+        background: $surface;
+    }
+    """
+
+    SCREENS = {  # noqa: RUF012
+        "menu": MenuScreen,
+        "options": OptionsScreen,
+        "game": GameScreen,
+    }
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.settings = Settings.load()
+
+    def on_mount(self) -> None:
+        self.push_screen("menu")
 
 
 def _create_game(wraparound_enabled: bool, width: int, height: int) -> GameProtocol:
@@ -199,7 +363,9 @@ def _render_board(game: GameProtocol) -> Text:
     return Text.from_markup("\n".join(lines))
 
 
-def _render_status(game: GameProtocol, paused: bool, wraparound_enabled: bool) -> Text:
+def _render_status(
+    game: GameProtocol, paused: bool, speed_preset: str = "Normal"
+) -> Text:
     state = game.state
     score_text = Text.from_markup(f"Score: [#e6a86c]{state.score}[/]  ")
 
@@ -210,11 +376,9 @@ def _render_status(game: GameProtocol, paused: bool, wraparound_enabled: bool) -
     else:
         status_text = Text.from_markup("[#6ac470]RUNNING[/]")
 
-    wrap_text = Text.from_markup(
-        f"  Wrap: [#8a8f9a]{'ON' if wraparound_enabled else 'OFF'}[/]"
-    )
+    speed_text = Text.from_markup(f"  Speed: [#8a8f9a]{speed_preset}[/]")
 
-    return score_text + status_text + wrap_text
+    return score_text + status_text + speed_text
 
 
 def run() -> None:

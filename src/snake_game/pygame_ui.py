@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 from collections.abc import Callable
 from typing import Protocol, cast
 
@@ -15,6 +16,7 @@ from snake_game.core import (
     GameProtocol,
     WraparoundGameFactory,
 )
+from snake_game.settings import SPEED_PRESETS, Settings
 
 KEY_MAP = {
     pygame.K_UP: UP,
@@ -31,7 +33,6 @@ CELL_SIZE = 28
 PADDING = 20
 INFO_HEIGHT = 92
 FPS = 60
-TICK_SECONDS = 0.12
 
 COLOR_BG = (22, 24, 28)
 COLOR_GRID = (40, 44, 52)
@@ -40,6 +41,17 @@ COLOR_SNAKE_HEAD = (106, 204, 112)
 COLOR_SNAKE_BODY = (70, 160, 92)
 COLOR_FOOD = (230, 120, 96)
 COLOR_TEXT = (230, 230, 230)
+COLOR_HIGHLIGHT = (106, 204, 112)
+COLOR_DIM = (120, 125, 135)
+
+MENU_WIDTH = 600
+MENU_HEIGHT = 480
+
+
+class _State(enum.Enum):
+    MENU = "menu"
+    OPTIONS = "options"
+    GAME = "game"
 
 
 def run() -> None:
@@ -60,14 +72,14 @@ class _PygameObserver(GameObserver):
         screen: _SurfaceLike,
         game: GameProtocol,
         paused_getter: Callable[[], bool],
-        wraparound_getter: Callable[[], bool],
+        speed_preset_getter: Callable[[], str],
         grid_w: int,
         grid_h: int,
     ) -> None:
         self._screen = screen
         self._game = game
         self._paused_getter = paused_getter
-        self._wraparound_getter = wraparound_getter
+        self._speed_preset_getter = speed_preset_getter
         self._grid_w = grid_w
         self._grid_h = grid_h
 
@@ -76,92 +88,185 @@ class _PygameObserver(GameObserver):
             self._screen,
             self._game,
             self._paused_getter(),
-            self._wraparound_getter(),
+            self._speed_preset_getter(),
             self._grid_w,
             self._grid_h,
         )
 
 
+def _render_menu(screen: _SurfaceLike) -> None:
+    screen.fill(COLOR_BG)
+    items = ["1 START NEW GAME", "2 OPTIONS", "3 EXIT"]
+    _draw_bitmap_text(screen, "SNAKE", (PADDING, 80), COLOR_HIGHLIGHT)
+    y = 200
+    for _item in items:
+        _draw_bitmap_text(screen, _item, (PADDING, y), COLOR_TEXT)
+        y += 60
+    pygame.display.flip()
+
+
+def _render_options(screen: _SurfaceLike, settings: Settings) -> None:
+    screen.fill(COLOR_BG)
+    _draw_bitmap_text(screen, "OPTIONS", (PADDING, 40), COLOR_HIGHLIGHT)
+    y = 120
+    _draw_bitmap_text(screen, "GAME SPEED:", (PADDING, y), COLOR_TEXT)
+    y += 50
+    for name in SPEED_PRESETS:
+        color = COLOR_HIGHLIGHT if name == settings.speed_preset else COLOR_DIM
+        label = f"  {name}"
+        _draw_bitmap_text(screen, label, (PADDING + 40, y), color)
+        y += 40
+    y += 20
+    wrap_text = f"WRAP: {'ON' if settings.wrap else 'OFF'}"
+    _draw_bitmap_text(screen, wrap_text, (PADDING, y), COLOR_TEXT)
+    y += 60
+    _draw_bitmap_text(screen, "1 SLOW  2 NORMAL  3 FAST", (PADDING, y), COLOR_DIM)
+    y += 30
+    _draw_bitmap_text(screen, "W TOGGLE WRAP", (PADDING, y), COLOR_DIM)
+    y += 30
+    _draw_bitmap_text(screen, "ESC BACK", (PADDING, y), COLOR_DIM)
+    pygame.display.flip()
+
+
 def _main() -> None:
+    settings = Settings.load()
     width = 20
     height = 20
-    wraparound_enabled = False
-    game = _create_game(wraparound_enabled, width, height)
+    state = _State.MENU
+
+    game: GameProtocol | None = None
+    observer: _PygameObserver | None = None
     paused = False
+    grid_w = 0
+    grid_h = 0
+    tick_seconds = settings.tick_seconds
+    time_since_tick = 0.0
 
     def _paused_getter() -> bool:
         return paused
 
-    def _wraparound_getter() -> bool:
-        return wraparound_enabled
+    def _speed_preset_getter() -> str:
+        return settings.speed_preset
 
-    grid_w = game.state.width * CELL_SIZE
-    grid_h = game.state.height * CELL_SIZE
-    screen_w = grid_w + PADDING * 2
-    screen_h = grid_h + PADDING * 2 + INFO_HEIGHT
-
-    screen = pygame.display.set_mode((screen_w, screen_h))
+    screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
     pygame.display.set_caption("Snake")
 
-    observer = _PygameObserver(
-        screen, game, _paused_getter, _wraparound_getter, grid_w, grid_h
-    )
-    game.add_observer(observer)
     clock = pygame.time.Clock()
-    time_since_tick = 0.0
+    _render_menu(screen)
+
     running = True
-
-    _render(screen, game, paused, wraparound_enabled, grid_w, grid_h)
-
     while running:
         dt = clock.tick(FPS) / 1000
-        time_since_tick += dt
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
             elif event.type == pygame.KEYDOWN:
-                if event.key in KEY_MAP:
-                    game.set_direction(KEY_MAP[event.key])
-                elif event.key == pygame.K_q:
-                    running = False
-                elif event.key == pygame.K_p:
-                    paused = not paused
-                    _render(screen, game, paused, wraparound_enabled, grid_w, grid_h)
-                elif event.key == pygame.K_r:
-                    game.reset()
-                    paused = False
-                    time_since_tick = 0.0
-                    _render(screen, game, paused, wraparound_enabled, grid_w, grid_h)
-                elif event.key == pygame.K_t:
-                    wraparound_enabled = not wraparound_enabled
-                    game = _create_game(wraparound_enabled, width, height)
-                    observer = _PygameObserver(
-                        screen,
-                        game,
-                        _paused_getter,
-                        _wraparound_getter,
-                        grid_w,
-                        grid_h,
-                    )
-                    game.add_observer(observer)
-                    paused = False
-                    time_since_tick = 0.0
-                    _render(screen, game, paused, wraparound_enabled, grid_w, grid_h)
+                if state == _State.MENU:
+                    if event.key in (pygame.K_1, pygame.K_RETURN):
+                        game = _create_game(settings.wrap, width, height)
+                        grid_w = game.state.width * CELL_SIZE
+                        grid_h = game.state.height * CELL_SIZE
+                        screen_w = grid_w + PADDING * 2
+                        screen_h = grid_h + PADDING * 2 + INFO_HEIGHT
+                        screen = pygame.display.set_mode((screen_w, screen_h))
+                        paused = False
+                        tick_seconds = settings.tick_seconds
+                        time_since_tick = 0.0
+                        observer = _PygameObserver(
+                            screen,
+                            game,
+                            _paused_getter,
+                            _speed_preset_getter,
+                            grid_w,
+                            grid_h,
+                        )
+                        game.add_observer(observer)
+                        state = _State.GAME
+                        _render(
+                            screen, game, paused, settings.speed_preset, grid_w, grid_h
+                        )
+                    elif event.key == pygame.K_2:
+                        state = _State.OPTIONS
+                        _render_options(screen, settings)
+                    elif event.key in (pygame.K_3, pygame.K_ESCAPE, pygame.K_q):
+                        running = False
 
-        if not paused and time_since_tick >= TICK_SECONDS:
-            game.step()
-            time_since_tick = 0.0
+                elif state == _State.OPTIONS:
+                    if event.key == pygame.K_1:
+                        settings.speed_preset = "Slow"
+                        settings.save()
+                        _render_options(screen, settings)
+                    elif event.key == pygame.K_2:
+                        settings.speed_preset = "Normal"
+                        settings.save()
+                        _render_options(screen, settings)
+                    elif event.key == pygame.K_3:
+                        settings.speed_preset = "Fast"
+                        settings.save()
+                        _render_options(screen, settings)
+                    elif event.key == pygame.K_w:
+                        settings.wrap = not settings.wrap
+                        settings.save()
+                        _render_options(screen, settings)
+                    elif event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
+                        state = _State.MENU
+                        screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
+                        _render_menu(screen)
 
-        if paused:
-            pygame.display.flip()
+                elif state == _State.GAME and game is not None:
+                    if event.key in KEY_MAP:
+                        game.set_direction(KEY_MAP[event.key])
+                    elif event.key == pygame.K_q:
+                        running = False
+                    elif event.key == pygame.K_p:
+                        paused = not paused
+                        _render(
+                            screen,
+                            game,
+                            paused,
+                            settings.speed_preset,
+                            grid_w,
+                            grid_h,
+                        )
+                    elif event.key == pygame.K_r:
+                        game.reset()
+                        paused = False
+                        time_since_tick = 0.0
+                        _render(
+                            screen,
+                            game,
+                            paused,
+                            settings.speed_preset,
+                            grid_w,
+                            grid_h,
+                        )
+                    elif event.key == pygame.K_ESCAPE:
+                        state = _State.MENU
+                        screen = pygame.display.set_mode((MENU_WIDTH, MENU_HEIGHT))
+                        game = None
+                        observer = None
+                        _render_menu(screen)
+
+        if state == _State.GAME and game is not None:
+            if paused or not game.state.alive:
+                if paused:
+                    pygame.display.flip()
+            else:
+                time_since_tick += dt
+                if time_since_tick >= tick_seconds:
+                    game.step()
+                    time_since_tick = 0.0
+
+    settings.save()
 
 
 def _render(
     screen: _SurfaceLike,
     game: GameProtocol,
     paused: bool,
-    wraparound_enabled: bool,
+    speed_preset: str,
     grid_w: int,
     grid_h: int,
 ) -> None:
@@ -193,11 +298,9 @@ def _render(
         _draw_rect(screen, COLOR_FOOD, rect)
 
     status = "GAME OVER" if not state.alive else "PAUSED" if paused else "RUNNING"
-
-    wrap_status = "ON" if wraparound_enabled else "OFF"
-    status_line = f"Score: {state.score}  {status}  Wrap: {wrap_status}"
+    status_line = f"Score: {state.score}  {status}  Speed: {speed_preset}"
     controls_line = "Controls: arrows/WASD move, P pause"
-    controls_line_two = "R restart, T toggle wrap, Q quit"
+    controls_line_two = "R restart, Esc menu, Q quit"
     _draw_text(screen, status_line, (PADDING, PADDING + grid_h + 14))
     _draw_text(screen, controls_line, (PADDING, PADDING + grid_h + 42))
     _draw_text(screen, controls_line_two, (PADDING, PADDING + grid_h + 62))
