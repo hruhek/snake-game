@@ -59,8 +59,14 @@ class FakeGame(GameProtocol):
 
 def make_factory_class(game: GameProtocol) -> type:
     class FakeFactory:
-        def create(self, width: int = 20, height: int = 15, seed: int | None = None):
-            del width, height, seed
+        def create(
+            self,
+            width: int = 20,
+            height: int = 15,
+            seed: int | None = None,
+            tick_interval: float = 0.12,
+        ):
+            del width, height, seed, tick_interval
             return game
 
     return FakeFactory
