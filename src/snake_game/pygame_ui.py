@@ -219,9 +219,6 @@ def _main() -> None:
                         game_over_timer = 0.0
                         _render_menu(screen)
 
-                elif current_state == GAME_OVER:
-                    pass
-
         if current_state == PLAYING and not paused:
             time_since_tick += dt
             if time_since_tick >= tick_interval:

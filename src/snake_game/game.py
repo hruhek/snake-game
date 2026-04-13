@@ -20,10 +20,10 @@ from snake_game.core import (
     WraparoundMovementStrategy,
 )
 from snake_game.settings import (
+    SPEED_TICK_INTERVALS,
     Settings,
     SettingsStore,
     SpeedPreset,
-    SPEED_TICK_INTERVALS,
 )
 
 __all__ = [
@@ -33,6 +33,7 @@ __all__ = [
     "EVENT_STEP",
     "LEFT",
     "RIGHT",
+    "SPEED_TICK_INTERVALS",
     "UP",
     "Game",
     "GameFactory",
@@ -43,7 +44,6 @@ __all__ = [
     "Settings",
     "SettingsStore",
     "SpeedPreset",
-    "SPEED_TICK_INTERVALS",
     "StandardMovementStrategy",
     "StepResult",
     "WraparoundGameFactory",

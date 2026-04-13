@@ -450,3 +450,114 @@ async def test_options_checkbox_change_while_updating():
         checkbox = app.screen.query_one("#wrap-checkbox", Checkbox)
         event = Checkbox.Changed(checkbox, True)
         app.screen.on_checkbox_changed(event)
+
+
+@pytest.mark.asyncio
+async def test_game_screen_action_return_to_game_menu():
+    app = SnakeTextualApp()
+    async with app.run_test() as pilot:
+        await pilot.click("#start")
+        await pilot.pause()
+        assert app.screen.__class__.__name__ == "GameScreen"
+        app.screen.action_return_to_game_menu()
+        await pilot.pause()
+        assert app.screen.__class__.__name__ == "MenuScreen"
+
+
+@pytest.mark.asyncio
+async def test_game_over_screen_dismiss():
+    from snake_game.textual_ui import GameOverScreen
+
+    app = SnakeTextualApp()
+    async with app.run_test() as pilot:
+        dismiss_called = []
+
+        def on_dismiss():
+            dismiss_called.append(1)
+
+        screen = GameOverScreen(5, on_dismiss)
+        app.push_screen(screen)
+        await pilot.pause()
+        screen._dismiss()
+        await pilot.pause()
+        assert len(dismiss_called) == 1
+
+
+@pytest.mark.asyncio
+async def test_game_over_screen_dismiss_without_callback():
+    from snake_game.textual_ui import GameOverScreen
+
+    app = SnakeTextualApp()
+    async with app.run_test() as pilot:
+        screen = GameOverScreen(5, None)
+        app.push_screen(screen)
+        await pilot.pause()
+        screen._dismiss()
+        await pilot.pause()
+
+
+@pytest.mark.asyncio
+async def test_game_over_screen_button_pressed():
+    from textual.widgets import Button
+
+    from snake_game.textual_ui import GameOverScreen
+
+    app = SnakeTextualApp()
+    async with app.run_test() as pilot:
+        dismiss_called = []
+
+        def on_dismiss():
+            dismiss_called.append(1)
+
+        screen = GameOverScreen(5, on_dismiss)
+        app.push_screen(screen)
+        await pilot.pause()
+
+        button = Button("Back to Menu")
+        button._id = "gameover-back"
+        event = Button.Pressed(button)
+        screen.on_button_pressed(event)
+        await pilot.pause()
+        assert len(dismiss_called) == 1
+
+
+@pytest.mark.asyncio
+async def test_game_screen_on_tick_triggers_game_over():
+    from snake_game.core import StepResult
+    from snake_game.textual_ui import GameOverScreen
+
+    app = SnakeTextualApp()
+    async with app.run_test() as pilot:
+        await pilot.click("#start")
+        await pilot.pause()
+
+        game = app.screen._game
+        original_step = game.step
+
+        def fake_step():
+            return StepResult(game.state, grew=False, game_over=True)
+
+        game.step = fake_step
+        app.screen._on_tick()
+        game.step = original_step
+        await pilot.pause()
+
+        assert isinstance(app.screen, GameOverScreen)
+
+        original_callback = app.screen._on_dismiss
+        app.screen._on_dismiss()
+        app.screen._on_dismiss = original_callback
+
+
+@pytest.mark.asyncio
+async def test_game_over_screen_timer_dismiss():
+    from snake_game.textual_ui import GameOverScreen
+
+    app = SnakeTextualApp()
+    async with app.run_test() as pilot:
+        screen = GameOverScreen(5, lambda: None)
+        app.push_screen(screen)
+        await pilot.pause()
+
+        screen._dismiss()
+        await pilot.pause()

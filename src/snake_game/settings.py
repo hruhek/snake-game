@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from enum import Enum
-import json
 from pathlib import Path
 
 CONFIG_PATH = Path("~/.config/snake-game/settings.json").expanduser()

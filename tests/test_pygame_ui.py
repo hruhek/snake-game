@@ -392,3 +392,111 @@ def test_options_state_cycles_speed_up(
     ui._main()
 
     assert saved_settings.get("speed_preset") == ui.SpeedPreset.SLOW
+
+
+def test_main_game_over_state_key_events(
+    monkeypatch, fake_game_factory, factory_for_game
+):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    surface = FakeSurface()
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_s),
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_ESCAPE),
+            SimpleNamespace(type=ui.pygame.QUIT),
+        ]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+
+    monkeypatch.setattr(ui, "_render_game", lambda *args, **kwargs: None)
+    monkeypatch.setattr(ui, "_render_game_over", lambda *args, **kwargs: None)
+
+    ui._main()
+
+
+def test_main_game_over_transition(monkeypatch, fake_game_factory, factory_for_game):
+    fake_game = fake_game_factory(snake=((2, 2),))
+    fake_game._state = GameState(
+        width=20,
+        height=15,
+        snake=((2, 2),),
+        direction=(1, 0),
+        food=(3, 2),
+        alive=False,
+        score=0,
+    )
+    surface = FakeSurface()
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_s),
+            SimpleNamespace(type=ui.pygame.QUIT),
+        ]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+
+    monkeypatch.setattr(ui, "_render_game", lambda *args, **kwargs: None)
+
+    game_over_calls = []
+
+    def track_game_over(screen, score):
+        game_over_calls.append(score)
+
+    monkeypatch.setattr(ui, "_render_game_over", track_game_over)
+
+    ui._main()
+
+    assert len(game_over_calls) == 1
+
+
+def test_main_game_over_auto_return_after_timer(
+    monkeypatch, fake_game_factory, factory_for_game
+):
+    from types import SimpleNamespace
+
+    fake_game = fake_game_factory(snake=((2, 2),))
+    fake_game._state = GameState(
+        width=20,
+        height=15,
+        snake=((2, 2),),
+        direction=(1, 0),
+        food=(3, 2),
+        alive=False,
+        score=0,
+    )
+    surface = FakeSurface()
+
+    class FakeClock:
+        def tick(self, fps=None):
+            return 3000
+
+        def get_time(self):
+            return 0
+
+    def fake_events():
+        return [
+            SimpleNamespace(type=ui.pygame.KEYDOWN, key=ui.pygame.K_s),
+            SimpleNamespace(type=ui.pygame.QUIT),
+        ]
+
+    patch_main_dependencies(
+        monkeypatch, fake_game, surface, fake_events, factory_for_game
+    )
+    monkeypatch.setattr(ui.pygame.time, "Clock", FakeClock)
+    monkeypatch.setattr(ui, "_render_game", lambda *args, **kwargs: None)
+
+    menu_calls = []
+
+    def track_menu(screen=None):
+        menu_calls.append(1)
+
+    monkeypatch.setattr(ui, "_render_menu", track_menu)
+
+    ui._main()
+
+    assert len(menu_calls) == 2

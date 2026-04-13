@@ -348,8 +348,12 @@ class GameScreen(Screen[None]):
             return
         result = self._game.step()
         if result.game_over:
+
+            def _dismiss_callback() -> None:
+                self.app.pop_screen()
+
             self.app.push_screen(
-                GameOverScreen(self._game.state.score, lambda: self.app.pop_screen())
+                GameOverScreen(self._game.state.score, _dismiss_callback)
             )
 
 
@@ -374,7 +378,9 @@ class GameOverScreen(Screen[None]):
     }
     """
 
-    def __init__(self, score: int, on_dismiss: Callable[[], None]) -> None:
+    def __init__(
+        self, score: int, on_dismiss: Callable[[], None] | None = None
+    ) -> None:
         super().__init__()
         self._score = score
         self._on_dismiss = on_dismiss
@@ -387,10 +393,9 @@ class GameOverScreen(Screen[None]):
         self.set_timer(2.0, self._dismiss)
 
     def _dismiss(self) -> None:
-        if self._on_dismiss:
+        if self._on_dismiss is not None:
             self._on_dismiss()
-        if len(self.app.screen.stack) > 1:
-            self.app.pop_screen()
+        self.app.pop_screen()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "gameover-back":
