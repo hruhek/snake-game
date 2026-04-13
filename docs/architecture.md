@@ -4,6 +4,7 @@
 
 - `src/snake_game/core.py`: source of truth for game rules, state, and step logic.
 - `src/snake_game/game.py`: backward-compatible re-export of core symbols for external imports.
+- `src/snake_game/settings.py`: settings store, configuration dataclass, and speed presets.
 - `src/snake_game/textual_ui.py`: Textual app UI loop, key bindings, and rendering.
 
 ## Patterns in use
@@ -28,6 +29,9 @@ from snake_game.game import (
     GameObserver,
     GameState,
     MovementStrategy,
+    Settings,
+    SettingsStore,
+    SpeedPreset,
     StandardMovementStrategy,
     StepResult,
     WraparoundGameFactory,
@@ -48,13 +52,13 @@ If you change or add core symbols in `src/snake_game/core.py`, update the re-exp
 
 ## Timing and sizing configuration
 
-Textual UI settings live in `src/snake_game/textual_ui.py`:
-- Grid size: `WIDTH = 20`, `HEIGHT = 15`
-- Tick rate: `TICK_SECONDS = 0.12`
+Speed tick intervals are defined in `src/snake_game/settings.py` via `SPEED_TICK_INTERVALS`:
+- `SpeedPreset.SLOW`: 0.20 seconds
+- `SpeedPreset.NORMAL`: 0.12 seconds
+- `SpeedPreset.FAST`: 0.06 seconds
 
 Pygame UI settings live in `src/snake_game/pygame_ui.py`:
 - Grid size: `Game(width=20, height=15)`
-- Tick rate: `TICK_SECONDS = 0.12`
 - FPS cap: `FPS = 60`
 - Cell size: `CELL_SIZE = 28`
 - Padding: `PADDING = 20`
@@ -62,13 +66,11 @@ Pygame UI settings live in `src/snake_game/pygame_ui.py`:
 
 Textual UI settings live in `src/snake_game/textual_ui.py`:
 - Grid size: `WIDTH = 20`, `HEIGHT = 15`
-- Tick rate: `TICK_SECONDS = 0.12`
 
 ## UI behavior notes
 
 - All UIs call `Game.set_direction(...)` and `Game.step()` on the same core logic.
 - All UIs use `GameFactory` for construction and `GameObserver` notifications for rendering.
 - All UIs support the same control scheme: arrows/WASD to move, `P` to pause,
-  `R` to restart, `T` to toggle wrap-around, `Q` to quit.
-- Wrap-around mode is runtime-selectable in each UI by switching between
-  `GameFactory` and `WraparoundGameFactory`.
+  `R` to restart, `Q` to quit.
+- Speed presets and wrap mode are configured via the Options screen.

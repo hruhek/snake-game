@@ -7,22 +7,22 @@
 
 ## Configuration and settings
 
+Settings file: `~/.config/snake-game/settings.json`
+
 ### Pygame UI
 
 Source: `src/snake_game/pygame_ui.py`
 
 - Grid size: `Game(width=20, height=15)`
-- Tick rate: `TICK_SECONDS = 0.12`
 - FPS cap: `FPS = 60`
 - Cell size: `CELL_SIZE = 28`
 - Padding: `PADDING = 20`
 - Info panel height: `INFO_HEIGHT = 92`
-- Wrap-around: toggled at runtime with `T` (default: OFF)
+- Speed and wrap are configured via the Options screen.
 
 ### Textual UI
 
 Source: `src/snake_game/textual_ui.py`
 
 - Grid size: `WIDTH = 20`, `HEIGHT = 15`
-- Tick rate: `TICK_SECONDS = 0.12`
-- Wrap-around: toggled at runtime with `T` (default: OFF)
+- Speed and wrap are configured via the Options screen.
