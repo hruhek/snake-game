@@ -258,6 +258,7 @@ class GameScreen(Screen[None]):
     """
 
     BINDINGS: ClassVar[list[Binding | tuple[str, str] | tuple[str, str, str]]] = [
+        Binding("escape", "return_to_game_menu", show=False),
         Binding("up,w", "move_up", show=False),
         Binding("down,s", "move_down", show=False),
         Binding("left,a", "move_left", show=False),
@@ -331,6 +332,9 @@ class GameScreen(Screen[None]):
     def action_quit_to_menu(self) -> None:
         self.app.pop_screen()
 
+    def action_return_to_game_menu(self) -> None:
+        self.app.pop_screen()
+
     def refresh_view(self) -> None:
         if self._game is None:
             return
@@ -342,7 +346,55 @@ class GameScreen(Screen[None]):
     def _on_tick(self) -> None:
         if self._paused or not self._game or not self._game.state.alive:
             return
-        self._game.step()
+        result = self._game.step()
+        if result.game_over:
+            self.app.push_screen(
+                GameOverScreen(self._game.state.score, lambda: self.app.pop_screen())
+            )
+
+
+class GameOverScreen(Screen[None]):
+    CSS = """
+    GameOverScreen {
+        layout: vertical;
+        align: center middle;
+        background: $surface;
+    }
+
+    #gameover-text {
+        width: 100%;
+        text-align: center;
+        text-style: bold;
+        color: #e5584a;
+        margin-bottom: 2;
+    }
+
+    Button {
+        width: 20;
+    }
+    """
+
+    def __init__(self, score: int, on_dismiss: Callable[[], None]) -> None:
+        super().__init__()
+        self._score = score
+        self._on_dismiss = on_dismiss
+
+    def compose(self) -> ComposeResult:
+        yield Static(f"GAME OVER\nScore: {self._score}", id="gameover-text")
+        yield Button("Back to Menu", id="gameover-back")
+
+    def on_mount(self) -> None:
+        self.set_timer(2.0, self._dismiss)
+
+    def _dismiss(self) -> None:
+        if self._on_dismiss:
+            self._on_dismiss()
+        if len(self.app.screen.stack) > 1:
+            self.app.pop_screen()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "gameover-back":
+            self._dismiss()
 
 
 class SnakeTextualApp(App[None]):
