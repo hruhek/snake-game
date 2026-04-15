@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from random import Random
 from typing import Protocol
 
@@ -102,9 +102,7 @@ class Game(GameProtocol):
             return
         if direction == OPPOSITE[self._state.direction]:
             return
-        self._state = self._state.__class__(
-            **{**self._state.__dict__, "direction": direction}
-        )
+        self._state = replace(self._state, direction=direction)
 
     def add_observer(self, observer: GameObserver) -> None:
         if observer in self._observers:
@@ -133,9 +131,7 @@ class Game(GameProtocol):
             food = self._state.food
             score = self._state.score
 
-        new_state = GameState(
-            **{**self._state.__dict__, "snake": new_snake, "food": food, "score": score}
-        )
+        new_state = replace(self._state, snake=new_snake, food=food, score=score)
         self._state = new_state
         self._notify(EVENT_STEP)
         return StepResult(new_state, grew=grew, game_over=False)
@@ -168,7 +164,7 @@ class Game(GameProtocol):
         return self._rng.choice(free)
 
     def _end_game(self) -> StepResult:
-        new_state = self._state.__class__(**{**self._state.__dict__, "alive": False})
+        new_state = replace(self._state, alive=False)
         self._state = new_state
         self._notify(EVENT_GAME_OVER)
         return StepResult(new_state, grew=False, game_over=True)
@@ -191,7 +187,7 @@ class Game(GameProtocol):
             score=0,
         )
         food = self._place_food(self._state.snake)
-        self._state = self._state.__class__(**{**self._state.__dict__, "food": food})
+        self._state = replace(self._state, food=food)
 
 
 class GameFactory:

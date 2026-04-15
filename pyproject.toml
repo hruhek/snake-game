@@ -34,15 +34,9 @@ select = [
 [tool.ruff.format]
 quote-style = "double"
 
-[tool.mypy]
-python_version = "3.13"
-warn_unused_ignores = true
-warn_redundant_casts = true
-warn_unused_configs = true
-
 [dependency-groups]
 dev = [
-    "mypy>=1.0.0",
+    "ty>=0.0.31",
     "pytest>=9.0.2",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",

@@ -24,7 +24,7 @@ lint-fix: ## Apply ruff auto-fixes
 format: ## Format code with ruff
 	uv run ruff format .
 
-type-check: ## Run mypy type checks
-	uv run mypy src
+type-check: ## Run ty type checks
+	uv run ty check src
 
 qa: format lint-fix type-check test ## Run full QA pipeline
