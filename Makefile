@@ -1,10 +1,7 @@
-.PHONY: help run run-ui run-textual test lint lint-fix format type-check qa
+.PHONY: help run-ui run-textual test lint lint-fix format type-check qa
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "%-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-
-run: ## Run Textual UI
-	uv run -m snake_game.textual_ui
 
 run-ui: ## Run pygame UI
 	uv run -m snake_game.pygame_ui
