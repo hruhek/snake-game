@@ -240,6 +240,14 @@ def test_observer_duplicate_add_not_notified_twice(event_log, observer_from_log)
     assert event_log == [EVENT_STEP]
 
 
+def test_factories_accept_tick_interval():
+    game = GameFactory().create(width=5, height=5, seed=1, tick_interval=0.1)
+    assert game.state.width == 5
+
+    game = WraparoundGameFactory().create(width=5, height=5, seed=1, tick_interval=0.1)
+    assert game.state.width == 5
+
+
 def test_factories_create_games(set_state):
     factory = GameFactory()
     game = factory.create(width=5, height=5, seed=1)
