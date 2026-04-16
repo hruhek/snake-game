@@ -196,7 +196,9 @@ class GameFactory:
         width: int = 20,
         height: int = 15,
         seed: int | None = None,
+        tick_interval: float | None = None,
     ) -> Game:
+        del tick_interval
         return Game(width=width, height=height, seed=seed)
 
 
@@ -206,7 +208,9 @@ class WraparoundGameFactory(GameFactory):
         width: int = 20,
         height: int = 15,
         seed: int | None = None,
+        tick_interval: float | None = None,
     ) -> Game:
+        del tick_interval
         return Game(
             width=width,
             height=height,
