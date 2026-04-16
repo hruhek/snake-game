@@ -176,28 +176,6 @@ def _main(store: SettingsStore | None = None) -> None:
                         state = _State.OPTIONS
                     elif MENU_ITEMS[menu_selection] == "Quit":
                         running = False
-                elif event.key == pygame.K_s:
-                    menu_selection = 0
-                    wraparound_enabled = settings.wrap
-                    tick_interval = SPEED_TICK_INTERVALS[settings.speed_preset]
-                    game = _create_game(
-                        wraparound_enabled, width, height, tick_interval
-                    )
-                    grid_w = game.state.width * CELL_SIZE
-                    grid_h = game.state.height * CELL_SIZE
-                    observer = _PygameObserver(
-                        screen, game, _paused_getter, _wraparound_getter, grid_w, grid_h
-                    )
-                    game.add_observer(observer)
-                    paused = False
-                    time_since_tick = 0.0
-                    state = _State.PLAYING
-                elif event.key == pygame.K_o:
-                    menu_selection = 1
-                    state = _State.OPTIONS
-                elif event.key == pygame.K_q:
-                    menu_selection = 2
-                    running = False
 
             elif state == _State.OPTIONS:
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):

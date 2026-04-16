@@ -103,7 +103,17 @@ def test_main_default_store(monkeypatch, fake_game_factory, factory_for_game):
     monkeypatch.setattr(ui, "WraparoundGameFactory", factory_for_game(fake_game))
     patch_main_monkeypatch(monkeypatch, surface)
     monkeypatch.setattr(
-        ui.pygame.event, "get", make_event_generator([[_event(ui.pygame.K_q)]])
+        ui.pygame.event,
+        "get",
+        make_event_generator(
+            [
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ]
+            ]
+        ),
     )
     monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
 
@@ -117,20 +127,6 @@ def test_main_default_store(monkeypatch, fake_game_factory, factory_for_game):
     monkeypatch.setattr(ui, "SettingsStore", TrackingStore)
     ui._main()
     assert store_created["called"]
-
-
-def test_menu_quit_with_q(monkeypatch, fake_game_factory, factory_for_game):
-    fake_game = fake_game_factory(snake=((2, 2),))
-    surface = FakeSurface()
-    monkeypatch.setattr(ui, "GameFactory", factory_for_game(fake_game))
-    monkeypatch.setattr(ui, "WraparoundGameFactory", factory_for_game(fake_game))
-    patch_main_monkeypatch(monkeypatch, surface)
-    monkeypatch.setattr(
-        ui.pygame.event, "get", make_event_generator([[_event(ui.pygame.K_q)]])
-    )
-    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
-
-    ui._main(FakeSettingsStore())
 
 
 def test_menu_quit_with_enter_on_quit(monkeypatch, fake_game_factory, factory_for_game):
@@ -165,30 +161,9 @@ def test_menu_navigate_up_then_start(monkeypatch, fake_game_factory, factory_for
         "get",
         make_event_generator(
             [
+                [_event(ui.pygame.K_DOWN)],
                 [_event(ui.pygame.K_UP)],
-                [_event(ui.pygame.K_s)],
-                [_event(ui.pygame.K_ESCAPE)],
-            ]
-        ),
-    )
-    monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock())
-
-    ui._main(FakeSettingsStore())
-    assert fake_game.step_calls >= 1
-
-
-def test_menu_s_starts_game(monkeypatch, fake_game_factory, factory_for_game):
-    fake_game = fake_game_factory(snake=((2, 2),))
-    surface = FakeSurface()
-    monkeypatch.setattr(ui, "GameFactory", factory_for_game(fake_game))
-    monkeypatch.setattr(ui, "WraparoundGameFactory", factory_for_game(fake_game))
-    patch_main_monkeypatch(monkeypatch, surface)
-    monkeypatch.setattr(
-        ui.pygame.event,
-        "get",
-        make_event_generator(
-            [
-                [_event(ui.pygame.K_s)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_ESCAPE)],
             ]
         ),
@@ -241,7 +216,7 @@ def test_menu_space_starts_game(monkeypatch, fake_game_factory, factory_for_game
     ui._main(FakeSettingsStore())
 
 
-def test_menu_o_goes_to_options_then_esc(
+def test_menu_navigate_to_options_then_esc(
     monkeypatch, fake_game_factory, factory_for_game
 ):
     fake_game = fake_game_factory(snake=((2, 2),))
@@ -254,9 +229,14 @@ def test_menu_o_goes_to_options_then_esc(
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_o)],
+                [_event(ui.pygame.K_DOWN)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_ESCAPE)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -276,9 +256,14 @@ def test_option_backspace_returns(monkeypatch, fake_game_factory, factory_for_ga
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_o)],
+                [_event(ui.pygame.K_DOWN)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_BACKSPACE)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -299,10 +284,15 @@ def test_options_speed_cycle(monkeypatch, fake_game_factory, factory_for_game):
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_o)],
+                [_event(ui.pygame.K_DOWN)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_ESCAPE)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -324,11 +314,16 @@ def test_options_wrap_toggle(monkeypatch, fake_game_factory, factory_for_game):
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_o)],
+                [_event(ui.pygame.K_DOWN)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_DOWN)],
                 [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_ESCAPE)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -349,10 +344,15 @@ def test_options_back_enter(monkeypatch, fake_game_factory, factory_for_game):
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_o)],
+                [_event(ui.pygame.K_DOWN)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_DOWN), _event(ui.pygame.K_DOWN)],
                 [_event(ui.pygame.K_RETURN)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -372,12 +372,16 @@ def test_playing_keys_then_escape(monkeypatch, fake_game_factory, factory_for_ga
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_s)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_UP)],
                 [_event(ui.pygame.K_p)],
                 [_event(ui.pygame.K_r)],
                 [_event(ui.pygame.K_ESCAPE)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -401,9 +405,13 @@ def test_playing_escape_returns_to_menu(
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_s)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_ESCAPE)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -441,7 +449,7 @@ def test_game_over_auto_return(monkeypatch, factory_for_game):
     monkeypatch.setattr(
         ui.pygame.event,
         "get",
-        make_event_generator([[_event(ui.pygame.K_s)]]),
+        make_event_generator([[_event(ui.pygame.K_RETURN)]]),
     )
     monkeypatch.setattr(ui.pygame.time, "Clock", lambda: FakeClock(dt=3.0))
 
@@ -610,7 +618,11 @@ def test_menu_enter_on_options(monkeypatch, fake_game_factory, factory_for_game)
                 [_event(ui.pygame.K_DOWN)],
                 [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_ESCAPE)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -629,10 +641,15 @@ def test_options_up_arrow(monkeypatch, fake_game_factory, factory_for_game):
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_o)],
+                [_event(ui.pygame.K_DOWN)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_UP)],
                 [_event(ui.pygame.K_ESCAPE)],
-                [_event(ui.pygame.K_q)],
+                [
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_DOWN),
+                    _event(ui.pygame.K_RETURN),
+                ],
             ]
         ),
     )
@@ -651,7 +668,7 @@ def test_game_over_key_ignored(monkeypatch, factory_for_game):
         "get",
         make_event_generator(
             [
-                [_event(ui.pygame.K_s)],
+                [_event(ui.pygame.K_RETURN)],
                 [_event(ui.pygame.K_p)],
             ]
         ),
