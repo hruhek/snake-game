@@ -107,7 +107,7 @@ Returns a Rich `Text` composed of:
 ## Game Constants
 
 - **Width:** 20 cells
-- **Height:** 15 cells
+- **Height:** 20 cells
 - **Tick Rate:** 0.12 seconds
 
 ## Implementation Notes
