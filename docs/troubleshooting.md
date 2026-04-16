@@ -11,7 +11,7 @@
 
 Source: `src/snake_game/pygame_ui.py`
 
-- Grid size: `Game(width=20, height=15)`
+- Grid size: `Game(width=20, height=20)`
 - Tick rate: `TICK_SECONDS = 0.12`
 - FPS cap: `FPS = 60`
 - Cell size: `CELL_SIZE = 28`
@@ -23,6 +23,6 @@ Source: `src/snake_game/pygame_ui.py`
 
 Source: `src/snake_game/textual_ui.py`
 
-- Grid size: `WIDTH = 20`, `HEIGHT = 15`
+- Grid size: `WIDTH = 20`, `HEIGHT = 20`
 - Tick rate: `TICK_SECONDS = 0.12`
 - Wrap-around: toggled at runtime with `T` (default: OFF)

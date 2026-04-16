@@ -4,6 +4,7 @@
 
 - `src/snake_game/core.py`: source of truth for game rules, state, and step logic.
 - `src/snake_game/game.py`: backward-compatible re-export of core symbols for external imports.
+- `src/snake_game/__init__.py`: re-exports all public symbols for `import snake_game` usage.
 - `src/snake_game/textual_ui.py`: Textual app UI loop, key bindings, and rendering.
 
 ## Patterns in use
@@ -23,9 +24,13 @@ The package ships a `py.typed` marker (PEP 561) so type checkers can use the inl
 Example:
 ```python
 from snake_game.game import (
+    EVENT_GAME_OVER,
+    EVENT_RESET,
+    EVENT_STEP,
     Game,
     GameFactory,
     GameObserver,
+    GameProtocol,
     GameState,
     MovementStrategy,
     StandardMovementStrategy,
@@ -43,26 +48,22 @@ If you change or add core symbols in `src/snake_game/core.py`, update the re-exp
 
 ## Entrypoints
 
-- Textual UI: `python -m snake_game.textual_ui` (or `make run`).
+- Textual UI: `python -m snake_game.textual_ui` (or `make run-textual`).
 - Pygame UI: `python -m snake_game.pygame_ui` (or `make run-ui`).
 
 ## Timing and sizing configuration
 
 Textual UI settings live in `src/snake_game/textual_ui.py`:
-- Grid size: `WIDTH = 20`, `HEIGHT = 15`
+- Grid size: `WIDTH = 20`, `HEIGHT = 20`
 - Tick rate: `TICK_SECONDS = 0.12`
 
 Pygame UI settings live in `src/snake_game/pygame_ui.py`:
-- Grid size: `Game(width=20, height=15)`
+- Grid size: `Game(width=20, height=20)`
 - Tick rate: `TICK_SECONDS = 0.12`
 - FPS cap: `FPS = 60`
 - Cell size: `CELL_SIZE = 28`
 - Padding: `PADDING = 20`
 - Info panel height: `INFO_HEIGHT = 92`
-
-Textual UI settings live in `src/snake_game/textual_ui.py`:
-- Grid size: `WIDTH = 20`, `HEIGHT = 15`
-- Tick rate: `TICK_SECONDS = 0.12`
 
 ## UI behavior notes
 
