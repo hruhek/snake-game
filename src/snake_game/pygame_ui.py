@@ -292,9 +292,6 @@ def _render_options(
             screen, label, (screen_w // 2 - 45, options_y + i * 30), color
         )
 
-    help_y = options_y + len(labels) * 30 + 20
-    _draw_bitmap_text(screen, "Esc: Back", (screen_w // 2 - 35, help_y), COLOR_DIM)
-
     pygame.display.flip()
 
 
