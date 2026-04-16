@@ -24,5 +24,6 @@ Source: `src/snake_game/pygame_ui.py`
 Source: `src/snake_game/textual_ui.py`
 
 - Grid size: `WIDTH = 20`, `HEIGHT = 20`
-- Tick rate: `TICK_SECONDS = 0.12`
-- Wrap-around: toggled at runtime with `T` (default: OFF)
+- Tick rate: configured via `SpeedPreset` in OptionsScreen (Slow 0.20s, Normal 0.12s, Fast 0.06s)
+- Wrap-around: configured in OptionsScreen, persisted via `SettingsStore` (default: OFF)
+- Controls: arrows/WASD to move, P to pause, R to restart, Esc to return to menu
