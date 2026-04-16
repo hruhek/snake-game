@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 from typing import ClassVar
 
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, Checkbox, RadioButton, RadioSet, Static
+from textual.widgets import Static
 
 from snake_game.core import (
     DOWN,
@@ -83,36 +83,55 @@ class MenuScreen(Screen[None]):
         color: $success;
         margin-bottom: 2;
     }
-    #menu-buttons Button {
-        width: 30;
-        margin-bottom: 1;
+    #menu-content {
+        text-align: center;
     }
     """
 
+    _ITEMS: ClassVar[list[str]] = ["Start", "Options", "Quit"]
+
     BINDINGS: ClassVar[list[Binding | tuple[str, str, str]]] = [
-        Binding("s", "start", "Start"),
-        Binding("o", "options", "Options"),
-        Binding("q", "quit", "Quit"),
+        Binding("up,w", "select_up", "Up", show=False),
+        Binding("down,s", "select_down", "Down", show=False),
+        Binding("enter,space", "confirm", "Confirm"),
     ]
 
     def __init__(self, settings_store: SettingsStore) -> None:
         super().__init__()
         self._settings_store = settings_store
+        self._selected = 0
 
     def compose(self) -> ComposeResult:
         yield Static("SNAKE", id="menu-title")
-        with Vertical(id="menu-buttons"):
-            yield Button("Start", variant="success", id="start-button")
-            yield Button("Options", variant="primary", id="options-button")
-            yield Button("Quit", variant="error", id="quit-button")
+        yield Static("", id="menu-content")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id
-        if button_id == "start-button":
+    def on_mount(self) -> None:
+        self._refresh_menu()
+
+    def _refresh_menu(self) -> None:
+        lines = []
+        for i, item in enumerate(self._ITEMS):
+            if i == self._selected:
+                lines.append(f"[bold #6ac470]> {item} <[/]")
+            else:
+                lines.append(f"  {item}  ")
+        with contextlib.suppress(Exception):
+            self.query_one("#menu-content", Static).update("\n".join(lines))
+
+    def action_select_up(self) -> None:
+        self._selected = (self._selected - 1) % len(self._ITEMS)
+        self._refresh_menu()
+
+    def action_select_down(self) -> None:
+        self._selected = (self._selected + 1) % len(self._ITEMS)
+        self._refresh_menu()
+
+    def action_confirm(self) -> None:
+        if self._selected == 0:
             self.action_start()
-        elif button_id == "options-button":
+        elif self._selected == 1:
             self.action_options()
-        elif button_id == "quit-button":
+        elif self._selected == 2:
             self.action_quit()
 
     def action_start(self) -> None:
@@ -139,61 +158,88 @@ class OptionsScreen(Screen[None]):
         color: $primary;
         margin-bottom: 2;
     }
-    #speed-radio {
-        margin: 0 0 1 0;
-        width: 30;
-    }
-    #wrap-checkbox {
-        margin: 0 0 2 0;
-        width: 30;
-    }
-    #back-button {
-        width: 30;
+    #options-content {
+        text-align: center;
     }
     """
 
+    _ITEMS: ClassVar[list[str]] = ["speed", "wrap", "back"]
+
     BINDINGS: ClassVar[list[Binding | tuple[str, str, str]]] = [
+        Binding("up,w", "select_up", "Up", show=False),
+        Binding("down,s", "select_down", "Down", show=False),
+        Binding("enter,space", "confirm", "Confirm"),
         Binding("escape", "back", "Back"),
     ]
-
-    _SPEED_INDEX: ClassVar[dict[SpeedPreset, int]] = {
-        SpeedPreset.SLOW: 0,
-        SpeedPreset.NORMAL: 1,
-        SpeedPreset.FAST: 2,
-    }
-
-    _INDEX_TO_SPEED: ClassVar[dict[int, SpeedPreset]] = {
-        0: SpeedPreset.SLOW,
-        1: SpeedPreset.NORMAL,
-        2: SpeedPreset.FAST,
-    }
 
     def __init__(self, settings_store: SettingsStore) -> None:
         super().__init__()
         self._settings_store = settings_store
+        self._selected = 0
+        self._speed_preset = SpeedPreset.NORMAL
+        self._wrap = False
 
     def compose(self) -> ComposeResult:
-        settings = self._settings_store.load()
-        speed = settings.speed_preset
         yield Static("Options", id="options-title")
-        with RadioSet(id="speed-radio"):
-            yield RadioButton("Slow", value=speed == SpeedPreset.SLOW)
-            yield RadioButton("Normal", value=speed == SpeedPreset.NORMAL)
-            yield RadioButton("Fast", value=speed == SpeedPreset.FAST)
-        yield Checkbox("Wrap around", value=settings.wrap, id="wrap-checkbox")
-        yield Button("Back", variant="primary", id="back-button")
+        yield Static("", id="options-content")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "back-button":
+    def on_mount(self) -> None:
+        settings = self._settings_store.load()
+        self._speed_preset = settings.speed_preset
+        self._wrap = settings.wrap
+        self._refresh_options()
+
+    def _refresh_options(self) -> None:
+        speed_names = {
+            SpeedPreset.SLOW: "Slow",
+            SpeedPreset.NORMAL: "Normal",
+            SpeedPreset.FAST: "Fast",
+        }
+        lines = []
+        for i, item in enumerate(self._ITEMS):
+            if item == "speed":
+                label = f"Speed: {speed_names[self._speed_preset]}"
+            elif item == "wrap":
+                label = f"Wrap: {'ON' if self._wrap else 'OFF'}"
+            else:
+                label = "Back"
+            if i == self._selected:
+                lines.append(f"[bold #6ac470]> {label} <[/]")
+            else:
+                lines.append(f"  {label}  ")
+        with contextlib.suppress(Exception):
+            self.query_one("#options-content", Static).update("\n".join(lines))
+
+    def action_select_up(self) -> None:
+        self._selected = (self._selected - 1) % len(self._ITEMS)
+        self._refresh_options()
+
+    def action_select_down(self) -> None:
+        self._selected = (self._selected + 1) % len(self._ITEMS)
+        self._refresh_options()
+
+    def action_confirm(self) -> None:
+        if self._selected == 0:
+            self._cycle_speed()
+        elif self._selected == 1:
+            self._toggle_wrap()
+        elif self._selected == 2:
             self.action_back()
 
+    def _cycle_speed(self) -> None:
+        order = [SpeedPreset.SLOW, SpeedPreset.NORMAL, SpeedPreset.FAST]
+        idx = order.index(self._speed_preset)
+        self._speed_preset = order[(idx + 1) % len(order)]
+        self._refresh_options()
+
+    def _toggle_wrap(self) -> None:
+        self._wrap = not self._wrap
+        self._refresh_options()
+
     def action_back(self) -> None:
-        radio_set = self.query_one("#speed-radio", RadioSet)
-        pressed = radio_set.pressed_index
-        speed_preset = self._INDEX_TO_SPEED.get(pressed, SpeedPreset.NORMAL)
-        checkbox = self.query_one("#wrap-checkbox", Checkbox)
-        wrap = checkbox.value
-        self._settings_store.save(Settings(speed_preset=speed_preset, wrap=wrap))
+        self._settings_store.save(
+            Settings(speed_preset=self._speed_preset, wrap=self._wrap)
+        )
         self.app.pop_screen()
 
 

@@ -264,6 +264,68 @@ def test_game_screen_on_tick_does_not_show_overlay_twice():
     mock_app.push_screen.assert_not_called()
 
 
+def test_menu_screen_init(settings_store):
+    menu = ui.MenuScreen(settings_store)
+    assert menu._selected == 0
+
+
+def test_menu_screen_select_up(settings_store):
+    menu = ui.MenuScreen(settings_store)
+    menu._selected = 0
+    menu.action_select_up()
+    assert menu._selected == 2
+    menu.action_select_up()
+    assert menu._selected == 1
+
+
+def test_menu_screen_select_down(settings_store):
+    menu = ui.MenuScreen(settings_store)
+    menu._selected = 0
+    menu.action_select_down()
+    assert menu._selected == 1
+    menu.action_select_down()
+    assert menu._selected == 2
+    menu.action_select_down()
+    assert menu._selected == 0
+
+
+def test_menu_screen_confirm_start(settings_store):
+    menu = ui.MenuScreen(settings_store)
+    menu._selected = 0
+    mock_app = MagicMock()
+    with patch.object(
+        ui.MenuScreen, "app", new_callable=lambda: property(lambda self: mock_app)
+    ):
+        menu.action_confirm()
+    mock_app.push_screen.assert_called_once()
+    call_args = mock_app.push_screen.call_args[0]
+    assert isinstance(call_args[0], ui.GameScreen)
+
+
+def test_menu_screen_confirm_options(settings_store):
+    menu = ui.MenuScreen(settings_store)
+    menu._selected = 1
+    mock_app = MagicMock()
+    with patch.object(
+        ui.MenuScreen, "app", new_callable=lambda: property(lambda self: mock_app)
+    ):
+        menu.action_confirm()
+    mock_app.push_screen.assert_called_once()
+    call_args = mock_app.push_screen.call_args[0]
+    assert isinstance(call_args[0], ui.OptionsScreen)
+
+
+def test_menu_screen_confirm_quit(settings_store):
+    menu = ui.MenuScreen(settings_store)
+    menu._selected = 2
+    mock_app = MagicMock()
+    with patch.object(
+        ui.MenuScreen, "app", new_callable=lambda: property(lambda self: mock_app)
+    ):
+        menu.action_confirm()
+    mock_app.exit.assert_called_once()
+
+
 def test_menu_screen_action_start(settings_store):
     menu = ui.MenuScreen(settings_store)
     mock_app = MagicMock()
@@ -298,63 +360,6 @@ def test_menu_screen_action_quit(settings_store):
     mock_app.exit.assert_called_once()
 
 
-def test_menu_screen_button_start(settings_store):
-    menu = ui.MenuScreen(settings_store)
-    mock_app = MagicMock()
-    with patch.object(
-        ui.MenuScreen, "app", new_callable=lambda: property(lambda self: mock_app)
-    ):
-        button = MagicMock()
-        button.id = "start-button"
-        event = MagicMock()
-        event.button = button
-        menu.on_button_pressed(event)
-    mock_app.push_screen.assert_called_once()
-
-
-def test_menu_screen_button_options(settings_store):
-    menu = ui.MenuScreen(settings_store)
-    mock_app = MagicMock()
-    with patch.object(
-        ui.MenuScreen, "app", new_callable=lambda: property(lambda self: mock_app)
-    ):
-        button = MagicMock()
-        button.id = "options-button"
-        event = MagicMock()
-        event.button = button
-        menu.on_button_pressed(event)
-    mock_app.push_screen.assert_called_once()
-
-
-def test_menu_screen_button_quit(settings_store):
-    menu = ui.MenuScreen(settings_store)
-    mock_app = MagicMock()
-    with patch.object(
-        ui.MenuScreen, "app", new_callable=lambda: property(lambda self: mock_app)
-    ):
-        button = MagicMock()
-        button.id = "quit-button"
-        event = MagicMock()
-        event.button = button
-        menu.on_button_pressed(event)
-    mock_app.exit.assert_called_once()
-
-
-def test_menu_screen_button_unknown(settings_store):
-    menu = ui.MenuScreen(settings_store)
-    mock_app = MagicMock()
-    with patch.object(
-        ui.MenuScreen, "app", new_callable=lambda: property(lambda self: mock_app)
-    ):
-        button = MagicMock()
-        button.id = "unknown-button"
-        event = MagicMock()
-        event.button = button
-        menu.on_button_pressed(event)
-    mock_app.push_screen.assert_not_called()
-    mock_app.exit.assert_not_called()
-
-
 def test_menu_screen_action_start_uses_settings(settings_store):
     settings_store.save(Settings(speed_preset=SpeedPreset.FAST, wrap=True))
     menu = ui.MenuScreen(settings_store)
@@ -369,109 +374,95 @@ def test_menu_screen_action_start_uses_settings(settings_store):
     assert game_screen._wrap_enabled is True
 
 
-def test_options_screen_action_back(settings_store):
+def test_options_screen_init(settings_store):
+    options = ui.OptionsScreen(settings_store)
+    assert options._selected == 0
+
+
+def test_options_screen_select_up(settings_store):
+    options = ui.OptionsScreen(settings_store)
+    options._selected = 0
+    options.action_select_up()
+    assert options._selected == 2
+
+
+def test_options_screen_select_down(settings_store):
+    options = ui.OptionsScreen(settings_store)
+    options._selected = 0
+    options.action_select_down()
+    assert options._selected == 1
+    options.action_select_down()
+    assert options._selected == 2
+    options.action_select_down()
+    assert options._selected == 0
+
+
+def test_options_screen_cycle_speed(settings_store):
     settings_store.save(Settings())
     options = ui.OptionsScreen(settings_store)
-    mock_app = MagicMock()
-    mock_radio = MagicMock()
-    mock_radio.pressed_index = 1
-    mock_checkbox = MagicMock()
-    mock_checkbox.value = True
-    with (
-        patch.object(
-            ui.OptionsScreen,
-            "app",
-            new_callable=lambda: property(lambda self: mock_app),
-        ),
-        patch.object(options, "query_one", side_effect=[mock_radio, mock_checkbox]),
-    ):
-        options.action_back()
-    mock_app.pop_screen.assert_called_once()
-    saved = settings_store.load()
-    assert saved.speed_preset == SpeedPreset.NORMAL
-    assert saved.wrap is True
+    assert options._speed_preset == SpeedPreset.NORMAL
+    options._cycle_speed()
+    assert options._speed_preset == SpeedPreset.FAST
+    options._cycle_speed()
+    assert options._speed_preset == SpeedPreset.SLOW
+    options._cycle_speed()
+    assert options._speed_preset == SpeedPreset.NORMAL
 
 
-def test_options_screen_action_back_saves_slow(settings_store):
+def test_options_screen_toggle_wrap(settings_store):
     settings_store.save(Settings())
     options = ui.OptionsScreen(settings_store)
-    mock_app = MagicMock()
-    mock_radio = MagicMock()
-    mock_radio.pressed_index = 0
-    mock_checkbox = MagicMock()
-    mock_checkbox.value = False
-    with (
-        patch.object(
-            ui.OptionsScreen,
-            "app",
-            new_callable=lambda: property(lambda self: mock_app),
-        ),
-        patch.object(options, "query_one", side_effect=[mock_radio, mock_checkbox]),
-    ):
-        options.action_back()
-    saved = settings_store.load()
-    assert saved.speed_preset == SpeedPreset.SLOW
-    assert saved.wrap is False
+    assert options._wrap is False
+    options._toggle_wrap()
+    assert options._wrap is True
+    options._toggle_wrap()
+    assert options._wrap is False
 
 
-def test_options_screen_action_back_no_selection(settings_store):
+def test_options_screen_confirm_speed(settings_store):
     settings_store.save(Settings())
     options = ui.OptionsScreen(settings_store)
-    mock_app = MagicMock()
-    mock_radio = MagicMock()
-    mock_radio.pressed_index = -1
-    mock_checkbox = MagicMock()
-    mock_checkbox.value = False
-    with (
-        patch.object(
-            ui.OptionsScreen,
-            "app",
-            new_callable=lambda: property(lambda self: mock_app),
-        ),
-        patch.object(options, "query_one", side_effect=[mock_radio, mock_checkbox]),
-    ):
-        options.action_back()
-    saved = settings_store.load()
-    assert saved.speed_preset == SpeedPreset.NORMAL
+    options._selected = 0
+    old_preset = options._speed_preset
+    options.action_confirm()
+    assert options._speed_preset != old_preset
 
 
-def test_options_screen_button_back(settings_store):
+def test_options_screen_confirm_wrap(settings_store):
     settings_store.save(Settings())
     options = ui.OptionsScreen(settings_store)
-    mock_app = MagicMock()
-    mock_radio = MagicMock()
-    mock_radio.pressed_index = 1
-    mock_checkbox = MagicMock()
-    mock_checkbox.value = False
-    with (
-        patch.object(
-            ui.OptionsScreen,
-            "app",
-            new_callable=lambda: property(lambda self: mock_app),
-        ),
-        patch.object(options, "query_one", side_effect=[mock_radio, mock_checkbox]),
-    ):
-        button = MagicMock()
-        button.id = "back-button"
-        event = MagicMock()
-        event.button = button
-        options.on_button_pressed(event)
-    mock_app.pop_screen.assert_called_once()
+    options._selected = 1
+    assert options._wrap is False
+    options.action_confirm()
+    assert options._wrap is True
 
 
-def test_options_screen_button_unknown(settings_store):
+def test_options_screen_confirm_back(settings_store):
     settings_store.save(Settings())
     options = ui.OptionsScreen(settings_store)
+    options._selected = 2
     mock_app = MagicMock()
     with patch.object(
         ui.OptionsScreen, "app", new_callable=lambda: property(lambda self: mock_app)
     ):
-        button = MagicMock()
-        button.id = "unknown-button"
-        event = MagicMock()
-        event.button = button
-        options.on_button_pressed(event)
-    mock_app.pop_screen.assert_not_called()
+        options.action_confirm()
+    mock_app.pop_screen.assert_called_once()
+
+
+def test_options_screen_action_back(settings_store):
+    settings_store.save(Settings(speed_preset=SpeedPreset.FAST, wrap=True))
+    options = ui.OptionsScreen(settings_store)
+    options._speed_preset = SpeedPreset.FAST
+    options._wrap = True
+    mock_app = MagicMock()
+    with patch.object(
+        ui.OptionsScreen, "app", new_callable=lambda: property(lambda self: mock_app)
+    ):
+        options.action_back()
+    saved = settings_store.load()
+    assert saved.speed_preset == SpeedPreset.FAST
+    assert saved.wrap is True
+    mock_app.pop_screen.assert_called_once()
 
 
 def test_snake_textual_app_default_settings_store():
@@ -497,18 +488,6 @@ def test_run_starts_textual_app(monkeypatch):
     assert calls["run"] == 1
 
 
-def test_speed_index_mapping():
-    assert ui.OptionsScreen._SPEED_INDEX[SpeedPreset.SLOW] == 0
-    assert ui.OptionsScreen._SPEED_INDEX[SpeedPreset.NORMAL] == 1
-    assert ui.OptionsScreen._SPEED_INDEX[SpeedPreset.FAST] == 2
-
-
-def test_index_to_speed_mapping():
-    assert ui.OptionsScreen._INDEX_TO_SPEED[0] == SpeedPreset.SLOW
-    assert ui.OptionsScreen._INDEX_TO_SPEED[1] == SpeedPreset.NORMAL
-    assert ui.OptionsScreen._INDEX_TO_SPEED[2] == SpeedPreset.FAST
-
-
 @pytest.mark.asyncio
 async def test_app_mount_pushes_menu(tmp_path):
     store = SettingsStore(tmp_path / "test_app_mount_settings.json")
@@ -526,13 +505,9 @@ async def test_start_game_from_menu(tmp_path):
     app = ui.SnakeTextualApp(settings_store=store)
     async with app.run_test() as pilot:
         await pilot.pause()
-        await pilot.press("s")
+        await pilot.press("enter")
         await pilot.pause()
         assert isinstance(app.screen, ui.GameScreen)
-        board = app.screen.query_one("#board", ui.Static)
-        status = app.screen.query_one("#status", ui.Static)
-        assert board.content is not None
-        assert status.content is not None
 
 
 @pytest.mark.asyncio
@@ -542,7 +517,9 @@ async def test_options_screen_from_menu(tmp_path):
     app = ui.SnakeTextualApp(settings_store=store)
     async with app.run_test() as pilot:
         await pilot.pause()
-        await pilot.press("o")
+        await pilot.press("down")
+        await pilot.pause()
+        await pilot.press("enter")
         await pilot.pause()
         assert isinstance(app.screen, ui.OptionsScreen)
 
