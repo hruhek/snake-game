@@ -7,6 +7,7 @@
 - `src/snake_game/__init__.py`: re-exports all public symbols for `import snake_game` usage.
 - `src/snake_game/settings.py`: persistent settings (speed preset, wrap toggle) with `SettingsStore`.
 - `src/snake_game/textual_ui.py`: Textual app with MenuScreen, OptionsScreen, GameScreen, and GameOverOverlay.
+- `src/snake_game/pygame_ui.py`: Pygame UI with MENU, OPTIONS, PLAYING, GAME_OVER state machine.
 
 ## Patterns in use
 
@@ -60,9 +61,9 @@ If you change or add core symbols in `src/snake_game/core.py`, update the re-exp
 Textual UI grid size: `WIDTH = 20`, `HEIGHT = 20` in `textual_ui.py`.
 Tick interval comes from `SPEED_TICK_INTERVALS` in `settings.py`, selected by the current `SpeedPreset`.
 
-Pygame UI settings live in `src/snake_game/pygame_ui.py`:
+Pygame UI settings:
 - Grid size: `Game(width=20, height=20)`
-- Tick rate: `TICK_SECONDS = 0.12`
+- Tick rate: from `SPEED_TICK_INTERVALS` in `settings.py`, selected by the current `SpeedPreset`
 - FPS cap: `FPS = 60`
 - Cell size: `CELL_SIZE = 28`
 - Padding: `PADDING = 20`
@@ -87,5 +88,6 @@ Pygame UI settings live in `src/snake_game/pygame_ui.py`:
 - All UIs use `GameFactory` for construction and `GameObserver` notifications for rendering.
 - Textual UI: arrows/WASD to move, P to pause, R to restart, Esc to return to menu.
   Wrap and speed come from `Settings`; the T binding is removed.
-- Pygame UI: arrows/WASD to move, P to pause, R to restart, T to toggle wrap, Q to quit.
+- Pygame UI: arrows/WASD to move, P to pause, R to restart, Esc to return to menu, S to start, O for options.
+  Q quits from MENU and OPTIONS only. Wrap and speed come from `Settings`; the T binding is removed.
 - Wrap-around mode in Textual UI is configured in OptionsScreen and persisted via `SettingsStore`.
