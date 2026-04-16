@@ -174,6 +174,10 @@ def test_package_exports():
     assert module.GameProtocol is not None
     assert module.GameState is not None
     assert module.StepResult is not None
+    assert module.Settings is not None
+    assert module.SettingsStore is not None
+    assert module.SpeedPreset is not None
+    assert module.SPEED_TICK_INTERVALS is not None
 
 
 def test_wraparound_strategy(set_state):
