@@ -173,7 +173,6 @@ def test_game_screen_init(fake_game):
     assert screen._wrap_enabled is True
     assert screen._paused is False
     assert screen._game_over_shown is False
-    assert screen._cadence_direction == RIGHT
 
 
 def test_game_screen_direction_actions(fake_game):
@@ -198,16 +197,23 @@ def test_game_screen_pause_toggle(fake_game):
     assert screen._paused is False
 
 
-def test_game_screen_restart(fake_game):
+def test_game_screen_restart_resets_vertical_cadence(fake_game, state_factory):
+    fake_game._state = state_factory(fake_game, direction=UP)
     screen = ui.GameScreen(fake_game, 0.12, wrap_enabled=False)
     screen.refresh_view = MagicMock()
+    for _ in range(3):
+        screen._on_tick()
+
     screen._paused = True
     screen._game_over_shown = True
     screen.action_restart()
     assert fake_game.reset_calls == 1
     assert screen._paused is False
     assert screen._game_over_shown is False
-    assert screen._cadence_direction == RIGHT
+
+    fake_game._state = state_factory(fake_game, direction=UP)
+    screen._on_tick()
+    assert fake_game.step_calls == 4
 
 
 def test_game_screen_return_to_menu(fake_game):
@@ -220,7 +226,11 @@ def test_game_screen_return_to_menu(fake_game):
     mock_app.pop_screen.assert_called_once()
 
 
-def test_game_screen_on_tick_steps_horizontally_every_tick(fake_game):
+@pytest.mark.parametrize("direction", [LEFT, RIGHT])
+def test_game_screen_on_tick_steps_horizontally_every_tick(
+    fake_game, state_factory, direction
+):
+    fake_game._state = state_factory(fake_game, direction=direction)
     screen = ui.GameScreen(fake_game, 0.12, wrap_enabled=False)
     screen.refresh_view = MagicMock()
     screen._on_tick()
@@ -244,23 +254,24 @@ def test_game_screen_on_tick_steps_vertically_three_of_four_ticks(
     assert step_counts == [1, 2, 3, 3, 4, 5, 6, 6]
 
 
-def test_game_screen_direction_change_steps_on_next_tick(fake_game, state_factory):
+def test_game_screen_turns_preserve_shared_vertical_cadence(fake_game, state_factory):
+    fake_game._state = state_factory(fake_game, direction=UP)
     screen = ui.GameScreen(fake_game, 0.12, wrap_enabled=False)
     screen.refresh_view = MagicMock()
-    screen._on_tick()
-
-    fake_game._state = state_factory(fake_game, direction=UP)
     for _ in range(3):
         screen._on_tick()
+    assert fake_game.step_calls == 3
+
+    fake_game._state = state_factory(fake_game, direction=RIGHT)
+    screen._on_tick()
     assert fake_game.step_calls == 4
 
-    fake_game._state = state_factory(fake_game, direction=LEFT)
+    fake_game._state = state_factory(fake_game, direction=DOWN)
+    screen._on_tick()
+    assert fake_game.step_calls == 4
+
     screen._on_tick()
     assert fake_game.step_calls == 5
-
-    fake_game._state = state_factory(fake_game, direction=UP)
-    screen._on_tick()
-    assert fake_game.step_calls == 6
 
 
 def test_game_screen_inactive_ticks_preserve_vertical_cadence(fake_game, state_factory):

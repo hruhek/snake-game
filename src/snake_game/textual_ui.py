@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import ClassVar, Protocol
+from typing import ClassVar
 
 from rich.text import Text
 from textual.app import App, ComposeResult
@@ -28,32 +28,6 @@ from snake_game.settings import (
 
 WIDTH = 40
 HEIGHT = 20
-
-
-class _TickCadence(Protocol):
-    def should_step(self) -> bool: ...
-
-    def reset(self) -> None: ...
-
-
-class _EveryTickCadence:
-    def should_step(self) -> bool:
-        return True
-
-    def reset(self) -> None:
-        pass
-
-
-class _ThreeOfFourTickCadence:
-    def __init__(self) -> None:
-        self._cycle_position = 0
-
-    def should_step(self) -> bool:
-        self._cycle_position = (self._cycle_position + 1) % 4
-        return self._cycle_position != 0
-
-    def reset(self) -> None:
-        self._cycle_position = 0
 
 
 class _TextualObserver(GameObserver):
@@ -326,13 +300,7 @@ class GameScreen(Screen[None]):
         self._wrap_enabled = wrap_enabled
         self._paused = False
         self._game_over_shown = False
-        self._movement_cadences: dict[tuple[int, int], _TickCadence] = {
-            UP: _ThreeOfFourTickCadence(),
-            DOWN: _ThreeOfFourTickCadence(),
-            LEFT: _EveryTickCadence(),
-            RIGHT: _EveryTickCadence(),
-        }
-        self._cadence_direction = self._game.state.direction
+        self._vertical_tick = 0
         self._observer = _TextualObserver(self)
         self._game.add_observer(self._observer)
 
@@ -367,7 +335,7 @@ class GameScreen(Screen[None]):
 
     def action_restart(self) -> None:
         self._game.reset()
-        self._reset_movement_cadence()
+        self._vertical_tick = 0
         self._paused = False
         self._game_over_shown = False
         self.refresh_view()
@@ -386,22 +354,15 @@ class GameScreen(Screen[None]):
             return
 
         direction = self._game.state.direction
-        cadence = self._movement_cadences[direction]
-        if direction != self._cadence_direction:
-            cadence.reset()
-            self._cadence_direction = direction
-        if not cadence.should_step():
-            return
+        if direction in (UP, DOWN):
+            self._vertical_tick = (self._vertical_tick + 1) % 4
+            if self._vertical_tick == 0:
+                return
 
         self._game.step()
         if not self._game.state.alive and not self._game_over_shown:
             self._game_over_shown = True
             self.app.push_screen(GameOverOverlay(self._game.state.score))
-
-    def _reset_movement_cadence(self) -> None:
-        for cadence in self._movement_cadences.values():
-            cadence.reset()
-        self._cadence_direction = self._game.state.direction
 
 
 class SnakeTextualApp(App[None]):

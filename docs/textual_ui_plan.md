@@ -111,7 +111,7 @@ Returns a Rich `Text` composed of:
 - **Width:** 40 cells
 - **Height:** 20 cells
 - **Rendered Cell Size:** 1 terminal column × 1 terminal row
-- **Tick Rate:** Selected preset interval horizontally; vertical movement steps on three of every four ticks
+- **Tick Rate:** Selected preset interval horizontally; vertical movement steps on three of every four active vertical-directed ticks, preserving cadence across turns
 
 ## Implementation Notes
 
@@ -119,4 +119,4 @@ Returns a Rich `Text` composed of:
 - Uses `rich.text.Text` for colored terminal output
 - Board and status are separate widgets updated independently
 - Game observer pattern triggers `refresh_view()` on state changes
-- Private cadence strategies apply direction-specific Textual movement timing
+- A shared counter preserves vertical movement cadence across direction changes
