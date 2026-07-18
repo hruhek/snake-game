@@ -56,7 +56,7 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 - **ID:** `board`
 - **Alignment:** Center
 - **Background:** Dark (`#16181c`)
-- **Content:** ASCII grid with colored snake and food using Rich markup (no border)
+- **Content:** Bordered ASCII grid with colored snake and food using Rich markup
 
 #### Status
 - **Widget:** `Static`
@@ -79,10 +79,12 @@ The Textual UI provides a terminal-based interface for the Snake game using the 
 
 The board uses Rich `Text` with inline color markup:
 
+- Every logical cell renders as one terminal character in one row
 - Snake head: `@` in green (`#6ac470`)
 - Snake body: `o` in darker green (`#46a05c`)
 - Food: `*` in coral (`#e67860`)
-- Background: ` ` in dark (`#16181c`)
+- Background: one space in dark (`#16181c`)
+- The 40×20 logical grid renders as a 42×22 board including its border
 
 ### Status Rendering (`_render_status`)
 
@@ -106,9 +108,10 @@ Returns a Rich `Text` composed of:
 
 ## Game Constants
 
-- **Width:** 20 cells
+- **Width:** 40 cells
 - **Height:** 20 cells
-- **Tick Rate:** 0.12 seconds
+- **Rendered Cell Size:** 1 terminal column × 1 terminal row
+- **Tick Rate:** Selected preset interval horizontally; vertical movement steps on three of every four active vertical-directed ticks, preserving cadence across turns
 
 ## Implementation Notes
 
@@ -116,3 +119,4 @@ Returns a Rich `Text` composed of:
 - Uses `rich.text.Text` for colored terminal output
 - Board and status are separate widgets updated independently
 - Game observer pattern triggers `refresh_view()` on state changes
+- A shared counter preserves vertical movement cadence across direction changes

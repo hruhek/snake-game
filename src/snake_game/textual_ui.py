@@ -26,7 +26,7 @@ from snake_game.settings import (
     SpeedPreset,
 )
 
-WIDTH = 20
+WIDTH = 40
 HEIGHT = 20
 
 
@@ -300,6 +300,7 @@ class GameScreen(Screen[None]):
         self._wrap_enabled = wrap_enabled
         self._paused = False
         self._game_over_shown = False
+        self._vertical_tick = 0
         self._observer = _TextualObserver(self)
         self._game.add_observer(self._observer)
 
@@ -334,6 +335,7 @@ class GameScreen(Screen[None]):
 
     def action_restart(self) -> None:
         self._game.reset()
+        self._vertical_tick = 0
         self._paused = False
         self._game_over_shown = False
         self.refresh_view()
@@ -350,6 +352,13 @@ class GameScreen(Screen[None]):
     def _on_tick(self) -> None:
         if self._paused or not self._game.state.alive:
             return
+
+        direction = self._game.state.direction
+        if direction in (UP, DOWN):
+            self._vertical_tick = (self._vertical_tick + 1) % 4
+            if self._vertical_tick == 0:
+                return
+
         self._game.step()
         if not self._game.state.alive and not self._game_over_shown:
             self._game_over_shown = True
@@ -383,19 +392,19 @@ def _create_game(
 def _render_board(game: GameProtocol) -> Text:
     state = game.state
     cells: list[list[str]] = [
-        ["  " for _ in range(state.width)] for _ in range(state.height)
+        [" " for _ in range(state.width)] for _ in range(state.height)
     ]
 
     for index, (x, y) in enumerate(state.snake):
         if 0 <= y < state.height and 0 <= x < state.width:
-            cells[y][x] = "[#6ac470]@@[/]" if index == 0 else "[#46a05c]oo[/]"
+            cells[y][x] = "[#6ac470]@[/]" if index == 0 else "[#46a05c]o[/]"
 
     food_x, food_y = state.food
     if state.alive and 0 <= food_y < state.height and 0 <= food_x < state.width:
-        cells[food_y][food_x] = "[#e67860]**[/]"
+        cells[food_y][food_x] = "[#e67860]*[/]"
 
     border_color = "[#46a05c]"
-    border_width = state.width * 2
+    border_width = state.width
     lines = []
     lines.append(f"{border_color}┌{'─' * border_width}┐[/]")
     for row in cells:
