@@ -67,7 +67,7 @@ def test_render_board_has_correct_dimensions():
     lines = result.plain.split("\n")
     assert len(lines) == ui.HEIGHT + 2
     for line in lines:
-        assert len(line) == ui.WIDTH * 2 + 2
+        assert len(line) == ui.WIDTH + 2
 
 
 def test_render_board_shows_snake():
@@ -76,15 +76,18 @@ def test_render_board_shows_snake():
         **{**game.state.__dict__, "snake": ((5, 5), (4, 5), (3, 5))}
     )
     result = ui._render_board(game)
-    assert "@" in result.plain
-    assert "o" in result.plain
+    lines = result.plain.split("\n")
+    rendered_row = 5 + 1
+    assert lines[rendered_row][5 + 1] == "@"
+    assert lines[rendered_row][4 + 1] == "o"
 
 
 def test_render_board_shows_food():
     game = ui._create_game(False, 20, 15)
     game._state = GameState(**{**game.state.__dict__, "food": (10, 7)})
     result = ui._render_board(game)
-    assert "*" in result.plain
+    lines = result.plain.split("\n")
+    assert lines[7 + 1][10 + 1] == "*"
 
 
 def test_render_board_hides_food_when_dead():
@@ -170,6 +173,7 @@ def test_game_screen_init(fake_game):
     assert screen._wrap_enabled is True
     assert screen._paused is False
     assert screen._game_over_shown is False
+    assert screen._cadence_direction == RIGHT
 
 
 def test_game_screen_direction_actions(fake_game):
@@ -203,6 +207,7 @@ def test_game_screen_restart(fake_game):
     assert fake_game.reset_calls == 1
     assert screen._paused is False
     assert screen._game_over_shown is False
+    assert screen._cadence_direction == RIGHT
 
 
 def test_game_screen_return_to_menu(fake_game):
@@ -215,11 +220,67 @@ def test_game_screen_return_to_menu(fake_game):
     mock_app.pop_screen.assert_called_once()
 
 
-def test_game_screen_on_tick_steps(fake_game):
+def test_game_screen_on_tick_steps_horizontally_every_tick(fake_game):
     screen = ui.GameScreen(fake_game, 0.12, wrap_enabled=False)
     screen.refresh_view = MagicMock()
     screen._on_tick()
-    assert fake_game.step_calls == 1
+    screen._on_tick()
+    assert fake_game.step_calls == 2
+
+
+@pytest.mark.parametrize("direction", [UP, DOWN])
+def test_game_screen_on_tick_steps_vertically_three_of_four_ticks(
+    fake_game, state_factory, direction
+):
+    fake_game._state = state_factory(fake_game, direction=direction)
+    screen = ui.GameScreen(fake_game, 0.12, wrap_enabled=False)
+    screen.refresh_view = MagicMock()
+
+    step_counts = []
+    for _ in range(8):
+        screen._on_tick()
+        step_counts.append(fake_game.step_calls)
+
+    assert step_counts == [1, 2, 3, 3, 4, 5, 6, 6]
+
+
+def test_game_screen_direction_change_steps_on_next_tick(fake_game, state_factory):
+    screen = ui.GameScreen(fake_game, 0.12, wrap_enabled=False)
+    screen.refresh_view = MagicMock()
+    screen._on_tick()
+
+    fake_game._state = state_factory(fake_game, direction=UP)
+    for _ in range(3):
+        screen._on_tick()
+    assert fake_game.step_calls == 4
+
+    fake_game._state = state_factory(fake_game, direction=LEFT)
+    screen._on_tick()
+    assert fake_game.step_calls == 5
+
+    fake_game._state = state_factory(fake_game, direction=UP)
+    screen._on_tick()
+    assert fake_game.step_calls == 6
+
+
+def test_game_screen_inactive_ticks_preserve_vertical_cadence(fake_game, state_factory):
+    fake_game._state = state_factory(fake_game, direction=UP)
+    screen = ui.GameScreen(fake_game, 0.12, wrap_enabled=False)
+    screen.refresh_view = MagicMock()
+    for _ in range(3):
+        screen._on_tick()
+
+    screen._paused = True
+    screen._on_tick()
+    screen._paused = False
+    fake_game._state = state_factory(fake_game, alive=False)
+    screen._on_tick()
+    fake_game._state = state_factory(fake_game, alive=True)
+    screen._on_tick()
+    assert fake_game.step_calls == 3
+
+    screen._on_tick()
+    assert fake_game.step_calls == 4
 
 
 def test_game_screen_on_tick_skips_when_paused(fake_game):
@@ -299,7 +360,10 @@ def test_menu_screen_confirm_start(settings_store):
         menu.action_confirm()
     mock_app.push_screen.assert_called_once()
     call_args = mock_app.push_screen.call_args[0]
-    assert isinstance(call_args[0], ui.GameScreen)
+    game_screen = call_args[0]
+    assert isinstance(game_screen, ui.GameScreen)
+    assert game_screen._game.state.width == 40
+    assert game_screen._game.state.height == 20
 
 
 def test_menu_screen_confirm_options(settings_store):
@@ -372,6 +436,8 @@ def test_menu_screen_action_start_uses_settings(settings_store):
     game_screen = call_args[0]
     assert game_screen._tick_interval == 0.06
     assert game_screen._wrap_enabled is True
+    assert game_screen._game.state.width == 40
+    assert game_screen._game.state.height == 20
 
 
 def test_options_screen_init(settings_store):

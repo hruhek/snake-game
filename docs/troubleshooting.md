@@ -31,8 +31,9 @@ Source: `src/snake_game/pygame_ui.py`
 
 Source: `src/snake_game/textual_ui.py`
 
-- Grid size: `WIDTH = 20`, `HEIGHT = 20`
-- Tick rate: from `SPEED_TICK_INTERVALS[settings.speed_preset]`
+- Grid size: `WIDTH = 40`, `HEIGHT = 20` (42×22 including the border)
+- Tick rate: from `SPEED_TICK_INTERVALS[settings.speed_preset]` horizontally;
+  vertical movement steps on three of every four ticks
 - Wrap-around: from `Settings.wrap` (set in Options screen, persisted via `SettingsStore`)
 - Controls: arrows/WASD to move, P to pause, R to restart, Esc to return to menu
 - Screens: MenuScreen → GameScreen / OptionsScreen; GameOverOverlay on death (auto-returns after 2s)

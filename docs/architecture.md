@@ -11,8 +11,8 @@
 
 ## Patterns in use
 
-- **Strategy**: `MovementStrategy` with `StandardMovementStrategy` and
-  `WraparoundMovementStrategy` controls how the next head position is computed.
+- **Strategy**: `MovementStrategy` controls standard/wraparound movement, while
+  private Textual cadence strategies select every-tick or three-of-four-tick steps.
 - **Observer**: `GameObserver` receives `EVENT_STEP`, `EVENT_RESET`, and
   `EVENT_GAME_OVER` notifications for UI rendering.
 - **Factory Method**: `GameFactory` and `WraparoundGameFactory` create configured
@@ -58,8 +58,13 @@ If you change or add core symbols in `src/snake_game/core.py`, update the re-exp
 
 ## Timing and sizing configuration
 
-Textual UI grid size: `WIDTH = 20`, `HEIGHT = 20` in `textual_ui.py`.
-Tick interval comes from `SPEED_TICK_INTERVALS` in `settings.py`, selected by the current `SpeedPreset`.
+Textual UI logical grid size: `WIDTH = 40`, `HEIGHT = 20` in `textual_ui.py`.
+Each logical cell renders as one terminal character, producing a 42-column by
+22-row board including its border.
+Tick interval comes from `SPEED_TICK_INTERVALS` in `settings.py`, selected by the
+current `SpeedPreset`. Textual applies that interval to horizontal movement and
+moves vertically on three of every four ticks; Pygame uses the selected interval
+for every direction.
 
 Pygame UI settings:
 - Grid size: `Game(width=20, height=20)`
